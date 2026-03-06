@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import anthropic
 from app.config import Config
 from app import task_manager
+from app.cost_tracker import record_cost
 
 
 # トーンのバリエーション（日替わり）
@@ -59,6 +60,8 @@ async def generate_morning_chase() -> str:
         ],
     )
 
+    record_cost("claude-haiku-4-5-20251001", message.usage.input_tokens, message.usage.output_tokens, "朝チェイス")
+
     return message.content[0].text.strip()
 
 
@@ -105,6 +108,8 @@ async def generate_chase_for_task(task: dict) -> str:
             }
         ],
     )
+
+    record_cost("claude-haiku-4-5-20251001", message.usage.input_tokens, message.usage.output_tokens, "個別チェイス")
 
     return message.content[0].text.strip()
 

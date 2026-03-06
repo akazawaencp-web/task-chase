@@ -2,6 +2,7 @@
 
 import anthropic
 from app.config import Config
+from app.cost_tracker import record_cost
 
 
 async def parse_task_input(user_text: str) -> dict:
@@ -37,6 +38,8 @@ async def parse_task_input(user_text: str) -> dict:
             }
         ],
     )
+
+    record_cost("claude-sonnet-4-20250514", message.usage.input_tokens, message.usage.output_tokens, "タスク解析")
 
     response_text = message.content[0].text.strip()
 

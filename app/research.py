@@ -2,6 +2,7 @@
 
 import anthropic
 from app.config import Config
+from app.cost_tracker import record_cost
 
 
 async def research_task(title: str, description: str = "", task_type: str = "action") -> dict:
@@ -19,6 +20,8 @@ async def research_task(title: str, description: str = "", task_type: str = "act
         max_tokens=4000,
         messages=[{"role": "user", "content": prompt}],
     )
+
+    record_cost("claude-sonnet-4-20250514", message.usage.input_tokens, message.usage.output_tokens, "タスク調査")
 
     response_text = message.content[0].text.strip()
 
