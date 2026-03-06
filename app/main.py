@@ -21,7 +21,7 @@ app = FastAPI(title="Task Chase System")
 parser = WebhookParser(Config.LINE_CHANNEL_SECRET)
 
 # ユーザーIDを保存（シングルユーザー前提）
-USER_ID_FILE = "data/user_id.txt"
+USER_ID_FILE = "/tmp/user_id.txt"
 
 
 def save_user_id(user_id: str):

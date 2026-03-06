@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-DATA_DIR = Path(__file__).parent.parent / "data"
+DATA_DIR = Path("/tmp/task-chase-data")
 TASKS_FILE = DATA_DIR / "tasks.json"
 
 
