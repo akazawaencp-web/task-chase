@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>タスク調査結果 - デザイン10パターン</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --coral:#ea8768;--sky:#33b6de;--tx:#1a1a2e;--tx2:#6b7280;--tx3:#9ca3af;
+  --bd:#e5e7eb;--ok:#22c55e;--warn:#f59e0b;--ng:#ef4444;
+  --shimmer:linear-gradient(145deg,#fff 0%,#fafafc 22%,#fff 45%,#f7f7fb 68%,#fff 88%,#fbfbfe 100%);
+  --sh:0 1px 3px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.06);
+  --sh2:0 2px 6px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter','BIZ UDPGothic',sans-serif;background:transparent;color:var(--tx);line-height:1.6;position:relative;z-index:10}
+#bg-canvas{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none}
+#bg-grain{position:fixed;inset:0;z-index:1;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");mix-blend-mode:multiply}
+.wrap{position:relative;z-index:10;max-width:720px;margin:0 auto;padding:24px 16px}
+
+/* Pattern selector */
+.selector{position:sticky;top:0;z-index:100;background:rgba(245,245,247,.92);backdrop-filter:blur(12px);padding:14px 0;margin-bottom:24px;border-bottom:1px solid var(--bd)}
+.selector-inner{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.sel-btn{font-family:inherit;font-size:11px;font-weight:600;padding:6px 14px;border-radius:99px;border:1.5px solid var(--bd);background:#fff;color:var(--tx2);cursor:pointer;transition:all .2s}
+.sel-btn:hover{border-color:var(--coral);color:var(--coral)}
+.sel-btn.active{background:var(--coral);border-color:var(--coral);color:#fff}
+
+.pattern{display:none}
+.pattern.active{display:block}
+.p-label{font-size:10px;font-weight:600;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:16px;text-align:center}
+
+/* ============================================ */
+/* Shared components                             */
+/* ============================================ */
+.card{background:var(--shimmer);border-radius:2px 14px 14px 2px;box-shadow:var(--sh);padding:20px 28px;position:relative;overflow:hidden;margin-bottom:16px}
+.card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--lc,var(--coral))}
+.card-sh2{box-shadow:var(--sh2)}
+.tag{font-size:10px;font-weight:600;padding:3px 10px;border-radius:99px;letter-spacing:.03em;display:inline-block}
+.tag-coral{background:rgba(234,135,104,.08);color:var(--coral)}
+.tag-sky{background:rgba(51,182,222,.08);color:var(--sky)}
+.tag-ok{background:rgba(34,197,94,.08);color:var(--ok)}
+.tag-ng{background:rgba(239,68,68,.08);color:var(--ng)}
+.sdot{width:6px;height:6px;border-radius:50%;display:inline-block;flex-shrink:0}
+.sl{font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:14px}
+
+/* ============================================ */
+/* #1 グラデーションヒーロー                      */
+/* ============================================ */
+.hero-grad{background:linear-gradient(135deg,rgba(234,135,104,.12) 0%,rgba(51,182,222,.08) 100%);border-radius:2px 18px 18px 2px;box-shadow:var(--sh2);padding:32px 32px 28px;position:relative;overflow:hidden;margin-bottom:20px}
+.hero-grad::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,var(--coral),var(--sky))}
+.hero-grad .h-over{font-size:9px;font-weight:700;color:var(--coral);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.hero-grad h1{font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1.2;margin-bottom:8px}
+.hero-grad .h-sub{font-size:13px;color:var(--tx2);line-height:1.6}
+.hero-grad .h-tags{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.hero-grad .h-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px;padding-top:18px;border-top:1px solid rgba(0,0,0,.05)}
+.hero-grad .h-stat{text-align:center}
+.hero-grad .h-stat-v{font-family:'DM Sans',sans-serif;font-size:18px;font-weight:700}
+.hero-grad .h-stat-l{font-size:9px;color:var(--tx3);margin-top:2px}
+
+/* ============================================ */
+/* #2 ダーク アクセント ヒーロー                  */
+/* ============================================ */
+.hero-dark{background:linear-gradient(135deg,#1a1a2e 0%,#2d2d4a 100%);border-radius:2px 18px 18px 2px;box-shadow:var(--sh2);padding:32px;position:relative;overflow:hidden;margin-bottom:20px;color:#fff}
+.hero-dark::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,var(--coral),var(--sky))}
+.hero-dark::after{content:'';position:absolute;right:-60px;top:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(234,135,104,.15),transparent 70%);pointer-events:none}
+.hero-dark .h-over{font-size:9px;font-weight:700;color:var(--coral);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.hero-dark h1{font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1.2;margin-bottom:8px}
+.hero-dark .h-sub{font-size:13px;color:rgba(255,255,255,.6);line-height:1.6}
+.hero-dark .h-tags{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.hero-dark .tag{background:rgba(255,255,255,.1);color:rgba(255,255,255,.8)}
+
+/* ============================================ */
+/* #3 スプリット ヒーロー                         */
+/* ============================================ */
+.hero-split{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+@media(max-width:520px){.hero-split{grid-template-columns:1fr}}
+.hero-split .hs-left{background:var(--shimmer);border-radius:2px 14px 14px 2px;box-shadow:var(--sh2);padding:28px;position:relative;overflow:hidden}
+.hero-split .hs-left::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--coral)}
+.hero-split .hs-right{background:var(--shimmer);border-radius:2px 14px 14px 2px;box-shadow:var(--sh2);padding:28px;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+.hero-split .hs-right::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--sky)}
+.hero-split h1{font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.2;margin-bottom:6px}
+.hero-split .hs-sub{font-size:12px;color:var(--tx2);line-height:1.5}
+.hero-split .hs-action{font-size:14px;font-weight:700;margin-bottom:8px}
+.hero-split .hs-where{font-size:12px;color:var(--tx2)}
+.hero-split .hs-deadline{font-family:'DM Sans',sans-serif;font-size:28px;font-weight:700;color:var(--ng);margin-top:12px}
+.hero-split .hs-deadline-l{font-size:10px;color:var(--tx3);margin-top:2px}
+
+/* ============================================ */
+/* #4 緊急度メーター ヒーロー                     */
+/* ============================================ */
+.hero-meter{background:var(--shimmer);border-radius:2px 18px 18px 2px;box-shadow:var(--sh2);padding:28px 32px;position:relative;overflow:hidden;margin-bottom:20px}
+.hero-meter::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--coral)}
+.hero-meter h1{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-bottom:16px}
+.meter-bar{height:8px;border-radius:4px;background:#eee;position:relative;overflow:hidden;margin-bottom:6px}
+.meter-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--ok),var(--warn),var(--ng));transition:width .6s}
+.meter-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--tx3);margin-bottom:16px}
+.meter-info{display:flex;gap:20px;flex-wrap:wrap}
+.meter-info .mi{display:flex;align-items:center;gap:6px;font-size:12px}
+.meter-info .mi-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* ============================================ */
+/* #5 マガジン レイアウト                         */
+/* ============================================ */
+.hero-mag{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:20px}
+@media(max-width:520px){.hero-mag{grid-template-columns:1fr}}
+.hero-mag .hm-main{background:var(--shimmer);border-radius:2px 14px 14px 2px;box-shadow:var(--sh2);padding:28px;position:relative;overflow:hidden}
+.hero-mag .hm-main::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--coral),var(--sky))}
+.hero-mag h1{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-bottom:10px}
+.hero-mag .hm-sub{font-size:12px;color:var(--tx2);line-height:1.6}
+.hero-mag .hm-sidebar{display:flex;flex-direction:column;gap:12px}
+.hero-mag .hm-stat{background:var(--shimmer);border-radius:2px 10px 10px 2px;box-shadow:var(--sh);padding:16px;position:relative;overflow:hidden;flex:1}
+.hero-mag .hm-stat::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.hero-mag .hm-stat.s1::before{background:var(--sky)}
+.hero-mag .hm-stat.s2::before{background:var(--ok)}
+.hero-mag .hm-stat.s3::before{background:var(--ng)}
+.hero-mag .hm-stat-v{font-family:'DM Sans',sans-serif;font-size:20px;font-weight:700}
+.hero-mag .hm-stat-l{font-size:9px;color:var(--tx3);margin-top:2px}
+
+/* ============================================ */
+/* #6 タイポグラフィ大型ヒーロー                  */
+/* ============================================ */
+.hero-typo{text-align:center;padding:40px 20px 36px;margin-bottom:20px}
+.hero-typo .ht-over{font-size:10px;font-weight:600;color:var(--coral);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px}
+.hero-typo h1{font-size:36px;font-weight:800;letter-spacing:-.04em;line-height:1.1;margin-bottom:12px;background:linear-gradient(135deg,var(--coral),var(--sky));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-typo .ht-sub{font-size:14px;color:var(--tx2);max-width:480px;margin:0 auto 20px;line-height:1.6}
+.hero-typo .ht-tags{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+
+/* ============================================ */
+/* #7 ダッシュボード型 3カラム                    */
+/* ============================================ */
+.hero-dash{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+@media(max-width:520px){.hero-dash{grid-template-columns:1fr}}
+.hero-dash .hd-card{background:var(--shimmer);border-radius:2px 12px 12px 2px;box-shadow:var(--sh2);padding:20px 22px;position:relative;overflow:hidden}
+.hero-dash .hd-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px}
+.hero-dash .hd-card.c1::before{background:var(--coral)}
+.hero-dash .hd-card.c2::before{background:var(--sky)}
+.hero-dash .hd-card.c3::before{background:var(--ng)}
+.hero-dash .hd-l{font-size:9px;font-weight:600;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+.hero-dash .hd-v{font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;line-height:1.1}
+.hero-dash .hd-sub{font-size:11px;color:var(--tx2);margin-top:6px;line-height:1.4}
+
+/* ============================================ */
+/* #8 タイムライン風ヒーロー                      */
+/* ============================================ */
+.hero-tl{background:var(--shimmer);border-radius:2px 18px 18px 2px;box-shadow:var(--sh2);padding:28px 32px;position:relative;overflow:hidden;margin-bottom:20px}
+.hero-tl::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,var(--coral),var(--sky))}
+.hero-tl h1{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-bottom:18px}
+.tl-steps{position:relative;padding-left:24px}
+.tl-steps::before{content:'';position:absolute;left:7px;top:4px;bottom:4px;width:2px;background:linear-gradient(180deg,var(--coral),var(--sky))}
+.tl-step{position:relative;padding:6px 0 14px;font-size:12px}
+.tl-step::before{content:'';position:absolute;left:-20px;top:10px;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid var(--coral);z-index:1}
+.tl-step:last-child::before{border-color:var(--sky)}
+.tl-step .ts-title{font-weight:600}
+.tl-step .ts-sub{color:var(--tx2);font-size:11px;margin-top:2px}
+
+/* ============================================ */
+/* #9 フローティングアクション ヒーロー           */
+/* ============================================ */
+.hero-float{position:relative;margin-bottom:20px}
+.hero-float .hf-bg{background:linear-gradient(135deg,rgba(234,135,104,.06) 0%,rgba(51,182,222,.04) 100%);border-radius:2px 18px 18px 2px;padding:28px 32px 60px;box-shadow:var(--sh)}
+.hero-float .hf-bg h1{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
+.hero-float .hf-bg .hf-sub{font-size:12px;color:var(--tx2)}
+.hero-float .hf-action{background:var(--shimmer);border-radius:2px 14px 14px 2px;box-shadow:var(--sh2);padding:18px 24px;position:relative;margin:-36px 20px 0;overflow:hidden}
+.hero-float .hf-action::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--coral)}
+.hero-float .hf-action-l{font-size:9px;font-weight:700;color:var(--coral);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.hero-float .hf-action-t{font-size:15px;font-weight:600}
+
+/* ============================================ */
+/* #10 カード積み重ね ヒーロー                    */
+/* ============================================ */
+.hero-stack{position:relative;margin-bottom:20px;padding-top:8px}
+.hero-stack .hs-bg{position:absolute;top:0;left:8px;right:8px;height:100%;background:rgba(51,182,222,.06);border-radius:2px 18px 18px 2px;transform:rotate(-1deg)}
+.hero-stack .hs-bg2{position:absolute;top:4px;left:4px;right:4px;height:100%;background:rgba(234,135,104,.04);border-radius:2px 18px 18px 2px;transform:rotate(0.5deg)}
+.hero-stack .hs-main{position:relative;background:var(--shimmer);border-radius:2px 18px 18px 2px;box-shadow:var(--sh2);padding:28px 32px;overflow:hidden}
+.hero-stack .hs-main::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,var(--coral),var(--sky))}
+.hero-stack h1{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
+.hero-stack .hs-sub{font-size:12px;color:var(--tx2);margin-bottom:14px}
+.hero-stack .hs-row{display:flex;gap:16px;flex-wrap:wrap}
+.hero-stack .hs-item{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500}
+.hero-stack .hs-item-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* ============================================ */
+/* Shared: sample content below hero             */
+/* ============================================ */
+.sample-content .card{margin-bottom:12px}
+.na-label{font-size:9px;font-weight:700;color:var(--coral);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.na-text{font-size:15px;font-weight:600}
+.na-sub{font-size:11px;color:var(--tx2);margin-top:4px}
+</style>
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div id="bg-grain"></div>
+<div class="wrap">
+
+<div class="selector">
+  <div class="selector-inner">
+    <button class="sel-btn active" onclick="show(1)">1</button>
+    <button class="sel-btn" onclick="show(2)">2</button>
+    <button class="sel-btn" onclick="show(3)">3</button>
+    <button class="sel-btn" onclick="show(4)">4</button>
+    <button class="sel-btn" onclick="show(5)">5</button>
+    <button class="sel-btn" onclick="show(6)">6</button>
+    <button class="sel-btn" onclick="show(7)">7</button>
+    <button class="sel-btn" onclick="show(8)">8</button>
+    <button class="sel-btn" onclick="show(9)">9</button>
+    <button class="sel-btn" onclick="show(10)">10</button>
+  </div>
+</div>
+
+<!-- #1 グラデーションヒーロー + 統計 -->
+<div class="pattern active" id="p1">
+<div class="p-label">#1 Gradient Hero + Stats</div>
+<div class="hero-grad">
+  <div class="h-over">Task Investigation</div>
+  <h1>免許更新</h1>
+  <div class="h-sub">鮫洲運転免許試験場で更新手続き。平日午前がおすすめ。</div>
+  <div class="h-tags">
+    <span class="tag tag-coral">行動が必要</span>
+    <span class="tag tag-sky">期限 4/22</span>
+    <span class="tag tag-ok">所要 約1時間</span>
+  </div>
+  <div class="h-stats">
+    <div class="h-stat"><div class="h-stat-v">47日</div><div class="h-stat-l">残り日数</div></div>
+    <div class="h-stat"><div class="h-stat-v">3,000円</div><div class="h-stat-l">費用</div></div>
+    <div class="h-stat"><div class="h-stat-v" style="color:var(--ok)">低</div><div class="h-stat-l">難易度</div></div>
+  </div>
+</div>
+<div class="sample-content">
+  <div class="card card-sh2" style="--lc:var(--coral)"><div class="na-label">Next Action</div><div class="na-text">鮫洲運転免許試験場に行く</div><div class="na-sub">平日午前が空いていておすすめ</div></div>
+</div>
+</div>
+
+<!-- #2 ダークアクセント -->
+<div class="pattern" id="p2">
+<div class="p-label">#2 Dark Accent Hero</div>
+<div class="hero-dark">
+  <div class="h-over">Task Investigation</div>
+  <h1>免許更新</h1>
+  <div class="h-sub">鮫洲運転免許試験場で更新手続き。平日午前がおすすめ。</div>
+  <div class="h-tags">
+    <span class="tag">行動が必要</span>
+    <span class="tag">期限 4/22</span>
+    <span class="tag">所要 約1時間</span>
+  </div>
+</div>
+<div class="sample-content">
+  <div class="card card-sh2" style="--lc:var(--coral)"><div class="na-label">Next Action</div><div class="na-text">鮫洲運転免許試験場に行く</div><div class="na-sub">平日午前が空いていておすすめ</div></div>
+</div>
+</div>
+
+<!-- #3 スプリット -->
+<div class="pattern" id="p3">
+<div class="p-label">#3 Split Hero (Task + Deadline)</div>
+<div class="hero-split">
+  <div class="hs-left">
+    <div class="tag tag-coral" style="margin-bottom:10px">行動が必要</div>
+    <h1>免許更新</h1>
+    <div class="hs-sub">鮫洲運転免許試験場で更新手続き</div>
+  </div>
+  <div class="hs-right">
+    <div class="hs-action">鮫洲試験場に行く</div>
+    <div class="hs-where">平日午前がおすすめ / 約1時間</div>
+    <div class="hs-deadline">47日</div>
+    <div class="hs-deadline-l">期限まで（4/22）</div>
+  </div>
+</div>
+<div class="sample-content">
+  <div class="card card-sh2" style="--lc:var(--coral)"><div class="na-label">Next Action</div><div class="na-text">鮫洲運転免許試験場に行く</div><div class="na-sub">平日午前が空いていておすすめ</div></div>
+</div>
+</div>
+
+<!-- #4 緊急度メーター -->
+<div class="pattern" id="p4">
+<div class="p-label">#4 Urgency Meter Hero</div>
+<div class="hero-meter">
+  <h1>免許更新</h1>
+  <div class="meter-bar"><div class="meter-fill" style="width:35%"></div></div>
+  <div class="meter-labels"><span>余裕あり</span><span>そろそろ</span><span>急いで</span></div>
+  <div class="meter-info">
+    <div class="mi"><div class="mi-dot" style="background:var(--sky)"></div>残り47日</div>
+    <div class="mi"><div class="mi-dot" style="background:var(--ok)"></div>約1時間</div>
+    <div class="mi"><div class="mi-dot" style="background:var(--coral)"></div>3,000円</div>
+  </div>
+</div>
+<div class="sample-content">
+  <div class="card card-sh2" style="--lc:var(--coral)"><div class="na-label">Next Action</div><div class="na-text">鮫洲運転免許試験場に行く</div><div class="na-sub">平日午前が空いていておすすめ</div></div>
+</div>
+</div>
+
+<!-- #5 マガジンレイアウト -->
+<div class="pattern" id="p5">
+<div class="p-label">#5 Magazine Layout</div>
+<div class="hero-mag">
+  <div class="hm-main">
+    <div class="tag tag-coral" style="margin-bottom:10px">行動が必要</div>
+    <h1>免許更新</h1>
+    <div class="hm-sub">鮫洲運転免許試験場で更新手続き。期限は4月22日。平日午前が空いていておすすめです。</div>
+  </div>
+  <div class="hm-sidebar">
+    <div class="hm-stat s1"><div class="hm-stat-v">47日</div><div class="hm-stat-l">残り日数</div></div>
+    <div class="hm-stat s2"><div class="hm-stat-v">1h</div><div class="hm-stat-l">所要時間</div></div>
+    <div class="hm-stat s3"><div class="hm-stat-v">3,000</div><div class="hm-stat-l">費用（円）</div></div>
+  </div>
+</div>
+<div class="sample-content">
+  <div class="card card-sh2" style="--lc:var(--coral)"><div class="na-label">Next Action</div><div class="na-text">鮫洲運転免許試験場に行く</div><div class="na-sub">平日午前が空いていておすすめ</div></div>
+</div>
+</div>
+
+<!-- #6 タイポグラフィ大型 -->
+<div class="pattern" id="p6">
+<div class="p-label">#6 Large Typography</div>
+<div class="hero-typo">
+  <div class="ht-over">Task Investigation</div>
+  <h1>免許更新</h1>
+  <div class="ht-sub">鮫洲運転免許試験場で更新手続き。平日午前がおすすめ。期限は4月22日。</div>
+  <div class="ht-tags">
+    <span class="tag tag-coral">行動が必要</span>
+    <span class="tag tag-sky">残り47日</span>
+    <span class="tag tag-ok">約1時間</span>
+    <span class="tag tag-ng">失効リスクあり</span>
+  </div>
+</div>
+<div class="sample-content">
+  <div class="card card-sh2" style="--lc:var(--coral)"><div class="na-label">Next Action</div><div class="na-text">鮫洲運転免許試験場に行く</div><div class="na-sub">平日午前が空いていておすすめ</div></div>
+</div>
+</div>
+
+<!-- #7 ダッシュボード型 -->
+<div class="pattern" id="p7">
+<div class="p-label">#7 Dashboard 3-Column</div>
+<div class="hero-dash">
+  <div class="hd-card c1">
+    <div class="hd-l">タスク</div>
+    <div class="hd-v" style="font-size:18px;font-family:inherit">免許更新</div>
+    <div class="hd-sub">鮫洲運転免許試験場</div>
+  </div>
+  <div class="hd-card c2">
+    <div class="hd-l">残り日数</div>
+    <div class="hd-v">47</div>
+    <div class="hd-sub">期限: 4/22</div>
+  </div>
+  <div class="hd-card c3">
+    <div class="hd-l">リスク</div>
+    <div class="hd-v" style="color:var(--ng)">免許失効</div>
+    <div class="hd-sub">超過で再取得に7,000円+</div>
+  </div>
+</div>
+<div class="sample-content">
+  <div class="card card-sh2" style="--lc:var(--coral)"><div class="na-label">Next Action</div><div class="na-text">鮫洲運転免許試験場に行く</div><div class="na-sub">平日午前が空いていておすすめ</div></div>
+</div>
+</div>
+
+<!-- #8 タイムライン風 -->
+<div class="pattern" id="p8">
+<div class="p-label">#8 Timeline Hero</div>
+<div class="hero-tl">
+  <h1>免許更新</h1>
+  <div class="tl-steps">
+    <div class="tl-step"><div class="ts-title">免許証 + 手数料を準備</div><div class="ts-sub">3,000円（ゴールド）/ 現金のみ</div></div>
+    <div class="tl-step"><div class="ts-title">鮫洲試験場に行く</div><div class="ts-sub">平日 8:30〜 がおすすめ / 約1時間</div></div>
+    <div class="tl-step"><div class="ts-title">視力検査 + 講習 + 新免許受取</div><div class="ts-sub">即日交付（試験場の場合）</div></div>
+  </div>
+</div>
+<div class="sample-content">
+  <div class="card" style="--lc:var(--ng);background:rgba(239,68,68,.04)"><div style="font-size:10px;font-weight:700;color:var(--ng);margin-bottom:4px">やらなかった場合</div><div style="font-size:12px;line-height:1.6">4月22日を過ぎると免許が失効。再取得に7,000円+半日以上。</div></div>
+</div>
+</div>
+
+<!-- #9 フローティングアクション -->
+<div class="pattern" id="p9">
+<div class="p-label">#9 Floating Action Hero</div>
+<div class="hero-float">
+  <div class="hf-bg">
+    <div class="tag tag-coral" style="margin-bottom:10px">行動が必要</div>
+    <h1>免許更新</h1>
+    <div class="hf-sub">期限 4/22 -- 残り47日 -- 費用 3,000円</div>
+  </div>
+  <div class="hf-action">
+    <div class="hf-action-l">Next Action</div>
+    <div class="hf-action-t">鮫洲運転免許試験場に行く（平日午前おすすめ）</div>
+  </div>
+</div>
+</div>
+
+<!-- #10 カード積み重ね -->
+<div class="pattern" id="p10">
+<div class="p-label">#10 Stacked Cards Hero</div>
+<div class="hero-stack">
+  <div class="hs-bg"></div>
+  <div class="hs-bg2"></div>
+  <div class="hs-main">
+    <div class="tag tag-coral" style="margin-bottom:10px">行動が必要</div>
+    <h1>免許更新</h1>
+    <div class="hs-sub">鮫洲運転免許試験場で更新手続き。期限は4月22日。</div>
+    <div class="hs-row">
+      <div class="hs-item"><div class="hs-item-dot" style="background:var(--sky)"></div>残り47日</div>
+      <div class="hs-item"><div class="hs-item-dot" style="background:var(--ok)"></div>約1時間</div>
+      <div class="hs-item"><div class="hs-item-dot" style="background:var(--coral)"></div>3,000円</div>
+      <div class="hs-item"><div class="hs-item-dot" style="background:var(--ng)"></div>失効リスク</div>
+    </div>
+  </div>
+</div>
+<div class="sample-content">
+  <div class="card card-sh2" style="--lc:var(--coral)"><div class="na-label">Next Action</div><div class="na-text">鮫洲運転免許試験場に行く</div><div class="na-sub">平日午前が空いていておすすめ</div></div>
+</div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+function show(n) {
+  document.querySelectorAll('.pattern').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sel-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('p' + n).classList.add('active');
+  document.querySelectorAll('.sel-btn')[n - 1].classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Animated Background
+(function() {
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let w, h, lines = [], time = 0, scrollSpeed = 0, lastScroll = 0;
+  function initLines() {
+    lines = [];
+    for (let i = 0; i < 18; i++) {
+      const pts = [], numPts = 4 + Math.floor(Math.random() * 3);
+      for (let j = 0; j < numPts; j++) pts.push({ x: (j / (numPts - 1)) * w * 1.4 - w * 0.2, baseY: Math.random() * h });
+      lines.push({ pts, opacity: 0.15 + Math.random() * 0.2, width: 0.8 + Math.random() * 1.2 });
+    }
+  }
+  function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; initLines(); }
+  window.addEventListener('resize', resize); resize();
+  const blobs = [{ x:.7,y:.3,r:.45,color:[235,136,104] },{ x:.3,y:.7,r:.50,color:[52,183,223] },{ x:.5,y:.2,r:.35,color:[52,183,223] },{ x:.8,y:.8,r:.30,color:[235,136,104] }];
+  window.addEventListener('scroll', function() { const st = window.scrollY; scrollSpeed = Math.min(Math.abs(st - lastScroll) * 0.002, 0.015); lastScroll = st; }, { passive: true });
+  function draw() {
+    time += 0.003 + scrollSpeed; scrollSpeed *= 0.95;
+    ctx.fillStyle = 'rgb(233,233,233)'; ctx.fillRect(0, 0, w, h);
+    for (let b = 0; b < blobs.length; b++) {
+      const bl = blobs[b], bx = w * (bl.x + Math.sin(time * 0.4 + b * 2.1) * 0.08), by = h * (bl.y + Math.cos(time * 0.3 + b * 1.7) * 0.06), br = Math.max(w, h) * bl.r;
+      const grd = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+      grd.addColorStop(0, 'rgba(' + bl.color + ',0.06)'); grd.addColorStop(0.6, 'rgba(' + bl.color + ',0.02)'); grd.addColorStop(1, 'rgba(' + bl.color + ',0)');
+      ctx.fillStyle = grd; ctx.fillRect(0, 0, w, h);
+    }
+    for (let i = 0; i < lines.length; i++) {
+      const L = lines[i], pts = L.pts; ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].baseY + Math.sin(time * 0.5 + i * 1.7) * 40);
+      for (let j = 1; j < pts.length - 1; j++) {
+        const yj = pts[j].baseY + Math.sin(time * (0.5 + j * 0.2) + i * 1.7) * 40;
+        const yjn = pts[j+1].baseY + Math.sin(time * (0.5 + (j+1) * 0.2) + i * 1.7) * 40;
+        ctx.quadraticCurveTo(pts[j].x, yj, (pts[j].x + pts[j+1].x) / 2, (yj + yjn) / 2);
+      }
+      const last = pts[pts.length-1];
+      ctx.lineTo(last.x, last.baseY + Math.sin(time * (0.5 + (pts.length-1) * 0.2) + i * 1.7) * 40);
+      ctx.strokeStyle = 'rgba(255,255,255,' + L.opacity + ')'; ctx.lineWidth = L.width; ctx.stroke();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+</body>
+</html>
