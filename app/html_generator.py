@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
-OUTPUT_DIR = Path(__file__).parent.parent / "reports"
+OUTPUT_DIR = Path("/tmp/task-chase-reports")
 
 
 def generate_report_html(task: dict, research: dict) -> str:

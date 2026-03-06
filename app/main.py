@@ -3,7 +3,10 @@
 import asyncio
 import re
 
+from pathlib import Path
+
 from fastapi import FastAPI, Request, HTTPException
+from fastapi.staticfiles import StaticFiles
 from linebot.v3.webhook import WebhookParser
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
@@ -18,6 +21,11 @@ from app.github_pages import publish_report
 from app.calendar_service import add_task_to_calendar, complete_calendar_task
 
 app = FastAPI(title="Task Chase System")
+
+# HTML配信用: /reports/ でHTMLファイルにアクセス可能にする
+REPORTS_DIR = Path("/tmp/task-chase-reports")
+REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/reports", StaticFiles(directory=str(REPORTS_DIR)), name="reports")
 parser = WebhookParser(Config.LINE_CHANNEL_SECRET)
 
 # ユーザーIDを保存（シングルユーザー前提）

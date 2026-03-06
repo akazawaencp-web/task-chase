@@ -1,42 +1,20 @@
-"""GitHub Pages: 生成したHTMLをリポジトリにpushして公開する"""
+"""レポート公開: 生成したHTMLの公開URLを返す"""
 
-import subprocess
+import os
 from pathlib import Path
-from app.config import Config
-
-REPO_DIR = Path(__file__).parent.parent
-REPORTS_DIR = REPO_DIR / "reports"
 
 
 def publish_report(html_filepath: str) -> str:
-    """HTMLファイルをGitHub Pagesにデプロイし、公開URLを返す"""
+    """HTMLファイルの公開URLを返す（FastAPIの静的ファイル配信を利用）"""
 
     filepath = Path(html_filepath)
     filename = filepath.name
 
-    # git add → commit → push
-    try:
-        subprocess.run(
-            ["git", "add", str(filepath.relative_to(REPO_DIR))],
-            cwd=str(REPO_DIR),
-            check=True,
-            capture_output=True,
-        )
-        subprocess.run(
-            ["git", "commit", "-m", f"Add report: {filename}"],
-            cwd=str(REPO_DIR),
-            check=True,
-            capture_output=True,
-        )
-        subprocess.run(
-            ["git", "push"],
-            cwd=str(REPO_DIR),
-            check=True,
-            capture_output=True,
-        )
-    except subprocess.CalledProcessError as e:
-        return ""
+    # Railway上のドメインを環境変数から取得、なければデフォルト
+    domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
+    if domain:
+        return f"https://{domain}/reports/{filename}"
 
-    # 公開URL
-    url = f"{Config.GITHUB_PAGES_URL}/reports/{filename}"
-    return url
+    # ローカル開発用
+    port = os.getenv("PORT", "8000")
+    return f"http://localhost:{port}/reports/{filename}"
