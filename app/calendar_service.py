@@ -19,12 +19,14 @@ def _get_service():
     """認証済みのCalendar APIサービスを返す"""
     creds = None
 
-    # 環境変数からトークンを読む（Railway用）
-    token_json = os.getenv("GOOGLE_TOKEN_JSON", "")
-    print(f"[Calendar] GOOGLE_TOKEN_JSON exists: {bool(token_json)}, length: {len(token_json)}")
+    # 環境変数からトークンを読む（Railway用、base64エンコード）
+    import base64
+    token_b64 = os.getenv("GOOGLE_TOKEN_JSON", "")
+    print(f"[Calendar] GOOGLE_TOKEN_JSON exists: {bool(token_b64)}, length: {len(token_b64)}")
 
-    if token_json:
+    if token_b64:
         try:
+            token_json = base64.b64decode(token_b64).decode("utf-8")
             token_data = json.loads(token_json)
             creds = Credentials.from_authorized_user_info(token_data, SCOPES)
             print(f"[Calendar] creds loaded, valid: {creds.valid}, expired: {creds.expired}")
