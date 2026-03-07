@@ -257,12 +257,23 @@ async def scheduled_chase():
         task_manager.record_chase(task["id"])
 
 
+async def scheduled_monthly_report():
+    """月次レポート（毎月1日 9:00）"""
+    user_id = load_user_id()
+    if not user_id:
+        return
+
+    from app.cost_tracker import format_monthly_report
+    line_handler.push_text(user_id, format_monthly_report())
+
+
 @app.on_event("startup")
 async def startup():
     """アプリ起動時にスケジューラーを開始"""
     scheduler.add_job(scheduled_morning_chase, "cron", hour=8, minute=0)
     scheduler.add_job(scheduled_chase, "cron", hour=12, minute=0)
     scheduler.add_job(scheduled_chase, "cron", hour=18, minute=0)
+    scheduler.add_job(scheduled_monthly_report, "cron", day=1, hour=9, minute=0)
     scheduler.start()
 
 
