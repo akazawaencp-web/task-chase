@@ -88,14 +88,18 @@ def add_task_to_calendar(title: str, deadline: str = "", description: str = "") 
     """Google Tasksにタスクを登録し、タスクIDを返す"""
     service = _get_tasks_service()
 
-    task_body = {
-        "title": title,
-        "notes": description,
-    }
+    today = datetime.now(JST).strftime("%Y-%m-%d")
+    if deadline and deadline != today:
+        m, d = deadline.split("-")[1], deadline.split("-")[2]
+        task_title = f"{title}（期限: {int(m)}/{int(d)}）"
+    else:
+        task_title = title
 
-    if not deadline:
-        deadline = datetime.now(JST).strftime("%Y-%m-%d")
-    task_body["due"] = f"{deadline}T00:00:00.000Z"
+    task_body = {
+        "title": task_title,
+        "notes": description,
+        "due": f"{today}T00:00:00.000Z",
+    }
 
     result = service.tasks().insert(tasklist="@default", body=task_body).execute()
 
