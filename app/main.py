@@ -196,8 +196,8 @@ async def handle_new_task(event: MessageEvent, text: str):
         raw_input=text,
     )
 
-    # 6. HTML生成
-    html_path = generate_report_html(task, research_result)
+    # 6. HTML生成（原文も渡して深掘りプロンプトを生成）
+    html_path = generate_report_html(task, research_result, raw_input=text)
 
     # 7. GitHub Pagesにデプロイ
     html_url = publish_report(html_path)
