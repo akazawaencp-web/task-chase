@@ -1,10 +1,11 @@
 """費用トラッカー: API呼び出しごとのコストを記録"""
 
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 
-COST_FILE = Path("/tmp/task-chase-data/costs.json")
+COST_FILE = Path(os.getenv("DATA_DIR", "/tmp/task-chase-data")) / "costs.json"
 
 # 料金表（1Mトークンあたりの円換算、1USD=150円想定）
 PRICING = {

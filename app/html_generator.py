@@ -4,8 +4,10 @@ import secrets
 from datetime import datetime
 from pathlib import Path
 
+import os
+
 TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
-OUTPUT_DIR = Path("/tmp/task-chase-reports")
+OUTPUT_DIR = Path(os.getenv("DATA_DIR", "/tmp/task-chase-data")) / "reports"
 
 
 def _build_deepdive_section(task: dict, research: dict, raw_input: str) -> str:

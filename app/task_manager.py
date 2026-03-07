@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-DATA_DIR = Path("/tmp/task-chase-data")
+DATA_DIR = Path(os.getenv("DATA_DIR", "/tmp/task-chase-data"))
 TASKS_FILE = DATA_DIR / "tasks.json"
 
 

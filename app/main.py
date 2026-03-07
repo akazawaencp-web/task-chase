@@ -1,6 +1,7 @@
 """メインアプリ: FastAPI + LINE Webhook + スケジューラー"""
 
 import asyncio
+import os
 import re
 
 from pathlib import Path
@@ -23,13 +24,13 @@ from app.calendar_service import add_task_to_calendar, complete_calendar_task
 app = FastAPI(title="Task Chase System")
 
 # HTML配信用: /reports/ でHTMLファイルにアクセス可能にする
-REPORTS_DIR = Path("/tmp/task-chase-reports")
+REPORTS_DIR = Path(os.getenv("DATA_DIR", "/tmp/task-chase-data") + "/reports")
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/reports", StaticFiles(directory=str(REPORTS_DIR)), name="reports")
 parser = WebhookParser(Config.LINE_CHANNEL_SECRET)
 
 # ユーザーIDを保存（シングルユーザー前提）
-USER_ID_FILE = "/tmp/user_id.txt"
+USER_ID_FILE = os.path.join(os.getenv("DATA_DIR", "/tmp/task-chase-data"), "user_id.txt")
 
 
 def save_user_id(user_id: str):
