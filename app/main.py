@@ -167,8 +167,9 @@ async def handle_new_task(event: MessageEvent, text: str):
             description=task.get("description", ""),
         )
         task_manager.update_task(task["id"], {"calendar_event_id": event_id})
-    except Exception:
-        pass  # カレンダー登録失敗しても続行
+        print(f"[Calendar] 登録成功: {task['title']}")
+    except Exception as e:
+        print(f"[Calendar] 登録失敗: {e}")  # エラーをログに出す
 
     # 5. 詳細調査
     research_result = await research_task(
