@@ -176,15 +176,19 @@ async def handle_new_task(event: MessageEvent, text: str):
     task["task_type"] = parsed.get("task_type", "action")
 
     # 4. Google Tasksに登録
+    print(f"[Tasks] 登録開始: {task['title']}")
     try:
         event_id = add_task_to_calendar(
             title=task["title"],
             deadline=task.get("deadline", ""),
             description=task.get("description", ""),
         )
+        print(f"[Tasks] 登録成功: id={event_id}")
         task_manager.update_task(task["id"], {"calendar_event_id": event_id})
     except Exception as e:
+        import traceback
         print(f"[Tasks] 登録エラー: {e}")
+        traceback.print_exc()
 
     # 5. 詳細調査（原文も渡してクオリティを保つ）
     research_result = await research_task(
