@@ -8,7 +8,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 import json
 import os
 
-SCOPES = ["https://www.googleapis.com/auth/calendar"]
+SCOPES = ["https://www.googleapis.com/auth/calendar", "https://www.googleapis.com/auth/tasks"]
 CREDENTIALS_PATH = os.path.join(os.path.dirname(__file__), "..", "credentials.json")
 TOKEN_PATH = os.path.join(os.path.dirname(__file__), "..", "token.json")
 
