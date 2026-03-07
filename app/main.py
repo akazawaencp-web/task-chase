@@ -82,11 +82,6 @@ async def handle_message(event: MessageEvent, text: str):
         line_handler.reply_text(event, format_monthly_report())
         return
 
-    # タスク追加（リッチメニューから）
-    if text == "タスク追加":
-        line_handler.reply_text(event, "登録したいタスクをそのまま送ってください。\n\n例: 免許更新 4月22日まで")
-        return
-
     # 完了報告（リッチメニューから）
     if text == "完了報告":
         tasks = task_manager.get_active_tasks()
@@ -110,11 +105,14 @@ async def handle_message(event: MessageEvent, text: str):
 
     # 今週のまとめ
     if text in ["今週", "今週のまとめ"]:
-        from app.cost_tracker import get_monthly_summary
         tasks = task_manager.get_active_tasks()
         completed = [t for t in task_manager._load_tasks() if t["status"] == "completed"]
-        summary = get_monthly_summary()
-        msg = f"-- 今週のまとめ --\n\n未完了: {len(tasks)}件\n完了済み: {len(completed)}件\n今月のAPI費用: {summary['total_yen']}円"
+        msg = f"-- 今週のまとめ --\n\n未完了: {len(tasks)}件\n完了済み: {len(completed)}件"
+        if tasks:
+            msg += "\n\n-- 未完了タスク --"
+            for t in tasks:
+                deadline_str = f"（期限: {t['deadline']}）" if t.get("deadline") else ""
+                msg += f"\n[{t['id']}] {t['title']}{deadline_str}"
         line_handler.reply_text(event, msg)
         return
 

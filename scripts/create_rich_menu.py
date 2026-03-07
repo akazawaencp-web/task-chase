@@ -22,7 +22,7 @@ RICH_MENU = {
     "areas": [
         {
             "bounds": {"x": 0, "y": 0, "width": 833, "height": 843},
-            "action": {"type": "message", "text": "タスク追加"},
+            "action": {"type": "message", "text": "タスク一覧"},
         },
         {
             "bounds": {"x": 833, "y": 0, "width": 834, "height": 843},
@@ -42,7 +42,7 @@ RICH_MENU = {
         },
         {
             "bounds": {"x": 1667, "y": 843, "width": 833, "height": 843},
-            "action": {"type": "message", "text": "タスク一覧"},
+            "action": {"type": "message", "text": "API費用"},
         },
     ],
 }
