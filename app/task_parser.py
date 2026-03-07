@@ -7,6 +7,9 @@ from app.cost_tracker import record_cost
 
 async def parse_task_input(user_text: str) -> dict:
     """ユーザーの自然言語入力をタスク情報に分解する"""
+    from datetime import datetime
+
+    today = datetime.now().strftime("%Y-%m-%d")
 
     client = anthropic.Anthropic(api_key=Config.ANTHROPIC_API_KEY)
 
@@ -17,6 +20,8 @@ async def parse_task_input(user_text: str) -> dict:
             {
                 "role": "user",
                 "content": f"""以下のテキストからタスク情報を抽出してJSON形式で返してください。
+
+今日の日付: {today}
 
 テキスト: 「{user_text}」
 
@@ -32,7 +37,7 @@ async def parse_task_input(user_text: str) -> dict:
 - titleは短く一言にまとめる（10文字以内が理想）
 - 長文の場合、要点をtitleに、詳細をdescriptionに分ける
 - 期限は「来週まで」「4月22日まで」等の自然言語から計算する
-- 今日の日付を基準にする
+- 今日の日付は{today}。年が省略されている場合は今日以降の直近の日付にする
 - 期限がない場合はdeadlineを空文字にする
 - 行動が必要なタスクはaction、調べもの・考え事はresearch"""
             }
