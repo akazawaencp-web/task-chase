@@ -6,7 +6,8 @@ import re
 
 from pathlib import Path
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Depends, Header
+from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from linebot.v3.webhook import WebhookParser
 from linebot.v3.exceptions import InvalidSignatureError
@@ -254,6 +255,65 @@ async def handle_complete(event: MessageEvent, task_id: int):
     line_handler.reply_text(event, msg)
 
 
+# === Deepdive API ===
+
+DEEPDIVE_API_KEY = os.getenv("DEEPDIVE_API_KEY", "")
+
+
+async def verify_api_key(authorization: str = Header("")):
+    """Deepdive API認証"""
+    if not DEEPDIVE_API_KEY or authorization != f"Bearer {DEEPDIVE_API_KEY}":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+@app.get("/api/deepdive/tasks")
+async def get_deepdive_tasks(_=Depends(verify_api_key)):
+    """深掘り未実施のタスク一覧"""
+    tasks = task_manager.get_active_tasks()
+    return [t for t in tasks if t.get("deepdive_status", "") not in ("completed", "skipped")]
+
+
+@app.post("/api/deepdive/upload")
+async def upload_deepdive(request: Request, _=Depends(verify_api_key)):
+    """深掘りHTMLをアップロード"""
+    data = await request.json()
+    task_id = data["task_id"]
+    html_content = data["html_content"]
+    filename = data.get("filename", f"rpt-dd-{os.urandom(8).hex()}.html")
+
+    filepath = REPORTS_DIR / filename
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(html_content)
+
+    url = publish_report(str(filepath))
+
+    task_manager.update_task(task_id, {
+        "deepdive_status": "completed",
+        "html_url": url,
+    })
+
+    return {"url": url, "filename": filename}
+
+
+@app.post("/api/deepdive/skip")
+async def skip_deepdive(request: Request, _=Depends(verify_api_key)):
+    """タスクの深掘りをスキップ"""
+    data = await request.json()
+    task_manager.update_task(data["task_id"], {"deepdive_status": "skipped"})
+    return {"status": "skipped"}
+
+
+@app.post("/api/deepdive/notify")
+async def notify_deepdive(request: Request, _=Depends(verify_api_key)):
+    """LINE通知を送信"""
+    data = await request.json()
+    user_id = load_user_id()
+    if user_id:
+        line_handler.push_text(user_id, data["message"])
+        return {"status": "sent"}
+    return {"status": "no_user_id"}
+
+
 # === スケジューラー ===
 
 scheduler = AsyncIOScheduler()
@@ -300,6 +360,11 @@ async def startup():
     scheduler.add_job(scheduled_chase, "cron", hour=18, minute=0)
     scheduler.add_job(scheduled_monthly_report, "cron", day=1, hour=9, minute=0)
     scheduler.start()
+
+
+@app.get("/robots.txt", response_class=PlainTextResponse)
+async def robots_txt():
+    return "User-agent: *\nDisallow: /reports/\n"
 
 
 @app.get("/")

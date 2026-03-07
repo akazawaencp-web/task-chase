@@ -10,54 +10,6 @@ TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 OUTPUT_DIR = Path(os.getenv("DATA_DIR", "/tmp/task-chase-data")) / "reports"
 
 
-def _build_deepdive_section(task: dict, research: dict, raw_input: str) -> str:
-    """クロちゃん（Claude Code）用の深掘りプロンプトセクションを生成"""
-    if not raw_input:
-        return ""
-
-    # チェックリストを箇条書きに
-    checklist_text = ""
-    for item in research.get("checklist", []):
-        checklist_text += f"- {item['item']}\n"
-
-    prompt_text = f"""以下のテーマについて、徹底的に調べてください。Web検索も使って、最新の情報を集めてください。
-
-テーマ: {task['title']}
-
-私の原文:
-「{raw_input}」
-
-予備調査で分かったこと:
-- Next Action: {research.get('next_action', '')}
-- やることリスト:
-{checklist_text}
-- リスク: {research.get('risk', '')}
-- 詳細: {research.get('details', '')}
-
-上記を踏まえて、以下を深掘りしてください:
-1. 予備調査のやることリストの各項目を実際に調べて、具体的な内容をまとめる
-2. 最新のデータや事例を含める
-3. 最終的なアクションプラン（具体的な手順・スクリプト）まで落とし込む"""
-
-    # HTMLエスケープ
-    import html
-    prompt_escaped = html.escape(prompt_text)
-
-    return f'''<div class="detail-section">
-  <button class="detail-toggle" onclick="toggleDetail(this)">
-    <span>Claude Codeでさらに深掘りする</span>
-    <span class="arrow">&#9660;</span>
-  </button>
-  <div class="detail-content">
-    <p style="font-size:11px;color:var(--tx3);margin-bottom:8px;">以下をClaude Codeにコピペすると、Web検索付きのガチ調査ができます</p>
-    <div style="background:var(--bg);border-radius:8px;padding:14px;position:relative;">
-      <button onclick="copyPrompt(this)" style="position:absolute;top:8px;right:8px;background:var(--coral);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;">コピー</button>
-      <pre style="font-size:11px;line-height:1.6;white-space:pre-wrap;word-break:break-all;margin:0;padding-right:60px;">{prompt_escaped}</pre>
-    </div>
-  </div>
-</div>'''
-
-
 def generate_report_html(task: dict, research: dict, raw_input: str = "") -> str:
     """タスク情報と調査結果からHTMLを生成し、ファイルパスを返す"""
 
@@ -107,6 +59,7 @@ def generate_report_html(task: dict, research: dict, raw_input: str = "") -> str
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
 <title>{task["title"]} - タスク調査結果</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -531,8 +484,6 @@ body {{
   <p>{research.get("schedule_suggestion", "")}</p>
 </div>''' if research.get("schedule_suggestion") else ""}
 
-{_build_deepdive_section(task, research, raw_input)}
-
 <div class="task-footer">
   Task Chase System -- Generated {today}
 </div>
@@ -540,13 +491,6 @@ body {{
 </div>
 
 <script>
-function copyPrompt(btn) {{
-  const pre = btn.parentElement.querySelector('pre');
-  navigator.clipboard.writeText(pre.textContent).then(() => {{
-    btn.textContent = 'コピー済み';
-    setTimeout(() => btn.textContent = 'コピー', 2000);
-  }});
-}}
 function toggleDetail(btn) {{
   const content = btn.nextElementSibling;
   const arrow = btn.querySelector('.arrow');
