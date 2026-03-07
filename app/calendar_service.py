@@ -1,11 +1,11 @@
 """Googleカレンダー連携: タスクの登録・完了・予定の参照"""
 
+import json
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
@@ -19,20 +19,19 @@ def _get_service():
     """認証済みのCalendar APIサービスを返す"""
     creds = None
 
-    if TOKEN_PATH.exists():
+    # 環境変数からトークンを読む（Railway用）
+    token_json = os.getenv("GOOGLE_TOKEN_JSON", "")
+    if token_json:
+        token_data = json.loads(token_json)
+        creds = Credentials.from_authorized_user_info(token_data, SCOPES)
+    elif TOKEN_PATH.exists():
         creds = Credentials.from_authorized_user_file(str(TOKEN_PATH), SCOPES)
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                Config.GOOGLE_CREDENTIALS_PATH, SCOPES
-            )
-            creds = flow.run_local_server(port=0)
-
-        with open(TOKEN_PATH, "w") as token:
-            token.write(creds.to_json())
+            raise RuntimeError("Googleカレンダーの認証トークンがありません。ローカルでauth_google.pyを実行してください。")
 
     return build("calendar", "v3", credentials=creds)
 
