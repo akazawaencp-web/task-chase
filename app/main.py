@@ -128,9 +128,17 @@ async def handle_message(event: MessageEvent, text: str):
     if text in ["今日", "今日のタスク"]:
         tasks = task_manager.get_today_tasks()
         if tasks:
-            msg = chase.generate_morning_chase()
-            msg_text = await msg if asyncio.iscoroutine(msg) else msg
-            line_handler.reply_text(event, msg_text)
+            # まず一覧を表示
+            lines = [f"-- 今日のタスク（{len(tasks)}件）--\n"]
+            for t in tasks:
+                deadline_str = f"（期限: {t['deadline']}）" if t.get("deadline") else ""
+                lines.append(f"[{t['id']}] {t['title']}{deadline_str}")
+            task_list = "\n".join(lines)
+
+            # AIのチェイスメッセージを生成
+            chase_msg = await chase.generate_morning_chase()
+
+            line_handler.reply_text(event, f"{task_list}\n\n{chase_msg}")
         else:
             line_handler.reply_text(event, "今日やるタスクはありません。")
         return
