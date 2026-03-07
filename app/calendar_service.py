@@ -51,8 +51,9 @@ def add_task_to_calendar(title: str, deadline: str = "", description: str = "") 
         "notes": description,
     }
 
-    if deadline:
-        task_body["due"] = f"{deadline}T00:00:00.000Z"
+    if not deadline:
+        deadline = datetime.now().strftime("%Y-%m-%d")
+    task_body["due"] = f"{deadline}T00:00:00.000Z"
 
     result = service.tasks().insert(tasklist="@default", body=task_body).execute()
 
