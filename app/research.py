@@ -5,15 +5,15 @@ from app.config import Config
 from app.cost_tracker import record_cost
 
 
-async def research_task(title: str, description: str = "", task_type: str = "action") -> dict:
+async def research_task(title: str, description: str = "", task_type: str = "action", raw_input: str = "") -> dict:
     """タスクを詳細調査して構造化データを返す"""
 
     client = anthropic.Anthropic(api_key=Config.ANTHROPIC_API_KEY)
 
     if task_type == "research":
-        prompt = _build_research_prompt(title, description)
+        prompt = _build_research_prompt(title, description, raw_input)
     else:
-        prompt = _build_action_prompt(title, description)
+        prompt = _build_action_prompt(title, description, raw_input)
 
     message = client.messages.create(
         model="claude-sonnet-4-20250514",
@@ -52,11 +52,12 @@ async def research_task(title: str, description: str = "", task_type: str = "act
     }
 
 
-def _build_action_prompt(title: str, description: str) -> str:
+def _build_action_prompt(title: str, description: str, raw_input: str = "") -> str:
     desc_part = f"\n補足: {description}" if description else ""
+    raw_part = f"\n\nユーザーの原文:\n「{raw_input}」" if raw_input else ""
     return f"""以下のタスクについて詳細に調査してください。
 
-タスク: {title}{desc_part}
+タスク: {title}{desc_part}{raw_part}
 
 以下のJSON形式で返してください（他の文章は不要、JSONのみ）:
 {{
@@ -88,11 +89,12 @@ def _build_action_prompt(title: str, description: str) -> str:
 - 日本の情報・日本語で回答する"""
 
 
-def _build_research_prompt(title: str, description: str) -> str:
+def _build_research_prompt(title: str, description: str, raw_input: str = "") -> str:
     desc_part = f"\n補足: {description}" if description else ""
+    raw_part = f"\n\nユーザーの原文:\n「{raw_input}」" if raw_input else ""
     return f"""以下のテーマについて調査・整理してください。
 
-テーマ: {title}{desc_part}
+テーマ: {title}{desc_part}{raw_part}
 
 以下のJSON形式で返してください（他の文章は不要、JSONのみ）:
 {{

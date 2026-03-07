@@ -188,11 +188,12 @@ async def handle_new_task(event: MessageEvent, text: str):
     except Exception as e:
         print(f"[Calendar] 登録失敗: {e}")  # エラーをログに出す
 
-    # 5. 詳細調査
+    # 5. 詳細調査（原文も渡してクオリティを保つ）
     research_result = await research_task(
         title=task["title"],
         description=task.get("description", ""),
         task_type=task.get("task_type", "action"),
+        raw_input=text,
     )
 
     # 6. HTML生成
