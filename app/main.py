@@ -175,16 +175,16 @@ async def handle_new_task(event: MessageEvent, text: str):
     )
     task["task_type"] = parsed.get("task_type", "action")
 
-    # 4. Google Tasksに登録（一時無効化: デバッグ後に有効化する）
-    # try:
-    #     event_id = add_task_to_calendar(
-    #         title=task["title"],
-    #         deadline=task.get("deadline", ""),
-    #         description=task.get("description", ""),
-    #     )
-    #     task_manager.update_task(task["id"], {"calendar_event_id": event_id})
-    # except Exception as e:
-    #     print(f"[Tasks] 登録エラー: {e}")
+    # 4. Google Tasksに登録
+    try:
+        event_id = add_task_to_calendar(
+            title=task["title"],
+            deadline=task.get("deadline", ""),
+            description=task.get("description", ""),
+        )
+        task_manager.update_task(task["id"], {"calendar_event_id": event_id})
+    except Exception as e:
+        print(f"[Tasks] 登録エラー: {e}")
 
     # 5. 詳細調査（原文も渡してクオリティを保つ）
     research_result = await research_task(
