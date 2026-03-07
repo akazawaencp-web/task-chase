@@ -3,8 +3,10 @@
 import json
 import os
 import threading
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
+
+JST = timezone(timedelta(hours=9))
 
 import base64
 from google.oauth2.credentials import Credentials
@@ -92,8 +94,8 @@ def add_task_to_calendar(title: str, deadline: str = "", description: str = "") 
     }
 
     if not deadline:
-        deadline = datetime.now().strftime("%Y-%m-%d")
-    task_body["due"] = f"{deadline}T00:00:00.000Z"
+        deadline = datetime.now(JST).strftime("%Y-%m-%d")
+    task_body["due"] = f"{deadline}T00:00:00+09:00"
 
     result = service.tasks().insert(tasklist="@default", body=task_body).execute()
 
