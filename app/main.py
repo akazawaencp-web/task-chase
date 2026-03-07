@@ -271,6 +271,12 @@ async def scheduled_monthly_report():
 @app.on_event("startup")
 async def startup():
     """アプリ起動時にスケジューラーを開始"""
+    # デバッグ: 環境変数の確認
+    import os
+    env_names = [k for k in os.environ.keys() if k.startswith("GOOGLE") or k.startswith("LINE") or k.startswith("ANTHROPIC")]
+    print(f"[Debug] 関連する環境変数: {env_names}")
+    token_val = os.getenv("GOOGLE_TOKEN_JSON", "")
+    print(f"[Debug] GOOGLE_TOKEN_JSON length at startup: {len(token_val)}")
     scheduler.add_job(scheduled_morning_chase, "cron", hour=8, minute=0)
     scheduler.add_job(scheduled_chase, "cron", hour=12, minute=0)
     scheduler.add_job(scheduled_chase, "cron", hour=18, minute=0)
