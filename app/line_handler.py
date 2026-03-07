@@ -7,6 +7,9 @@ from linebot.v3.messaging import (
     PushMessageRequest,
     ReplyMessageRequest,
     TextMessage,
+    QuickReply,
+    QuickReplyItem,
+    MessageAction,
 )
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
@@ -15,14 +18,17 @@ from app.config import Config
 configuration = Configuration(access_token=Config.LINE_CHANNEL_ACCESS_TOKEN)
 
 
-def reply_text(event: MessageEvent, text: str):
+def reply_text(event: MessageEvent, text: str, quick_reply=None):
     """LINEにテキストメッセージを返信"""
     with ApiClient(configuration) as api_client:
         api = MessagingApi(api_client)
+        msg = TextMessage(text=text)
+        if quick_reply:
+            msg.quick_reply = quick_reply
         api.reply_message(
             ReplyMessageRequest(
                 reply_token=event.reply_token,
-                messages=[TextMessage(text=text)],
+                messages=[msg],
             )
         )
 

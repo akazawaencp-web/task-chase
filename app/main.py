@@ -91,10 +91,19 @@ async def handle_message(event: MessageEvent, text: str):
     if text == "完了報告":
         tasks = task_manager.get_active_tasks()
         if tasks:
-            lines = ["完了したタスクの番号を「○完了」と送ってください。\n"]
-            for t in tasks:
-                lines.append(f"[{t['id']}] {t['title']}")
-            line_handler.reply_text(event, "\n".join(lines))
+            from linebot.v3.messaging import QuickReply, QuickReplyItem, MessageAction
+            items = []
+            for t in tasks[:13]:  # クイックリプライは最大13個
+                items.append(
+                    QuickReplyItem(
+                        action=MessageAction(
+                            label=f"{t['title'][:12]}",
+                            text=f"{t['id']}完了",
+                        )
+                    )
+                )
+            quick_reply = QuickReply(items=items)
+            line_handler.reply_text(event, "完了したタスクをタップしてね!", quick_reply=quick_reply)
         else:
             line_handler.reply_text(event, "未完了のタスクはありません。")
         return
