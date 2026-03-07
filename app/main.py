@@ -183,9 +183,9 @@ async def handle_new_task(event: MessageEvent, text: str):
             description=task.get("description", ""),
         )
         task_manager.update_task(task["id"], {"calendar_event_id": event_id})
-        print(f"[Calendar] 登録成功: {task['title']}")
+        pass
     except Exception as e:
-        print(f"[Calendar] 登録失敗: {e}")  # エラーをログに出す
+        pass
 
     # 5. 詳細調査（原文も渡してクオリティを保つ）
     research_result = await research_task(
@@ -288,17 +288,6 @@ async def scheduled_monthly_report():
 @app.on_event("startup")
 async def startup():
     """アプリ起動時にスケジューラーを開始"""
-    # デバッグ: 環境変数の確認
-    import os
-    env_names = [k for k in os.environ.keys() if k.startswith("GOOGLE") or k.startswith("LINE") or k.startswith("ANTHROPIC")]
-    print(f"[Debug] 関連する環境変数: {env_names}")
-    token_val = os.getenv("GOOGLE_TOKEN_JSON", "")
-    print(f"[Debug] GOOGLE_TOKEN_JSON length at startup: {len(token_val)}")
-    data_dir = os.getenv("DATA_DIR", "/tmp/task-chase-data")
-    print(f"[Debug] DATA_DIR env: {os.getenv('DATA_DIR', 'NOT SET')}")
-    print(f"[Debug] DATA_DIR resolved: {data_dir}")
-    print(f"[Debug] /data exists: {os.path.exists('/data')}")
-    print(f"[Debug] /data contents: {os.listdir('/data') if os.path.exists('/data') else 'N/A'}")
     scheduler.add_job(scheduled_morning_chase, "cron", hour=8, minute=0)
     scheduler.add_job(scheduled_chase, "cron", hour=12, minute=0)
     scheduler.add_job(scheduled_chase, "cron", hour=18, minute=0)

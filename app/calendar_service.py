@@ -22,14 +22,11 @@ def _get_service():
     # 環境変数からトークンを読む（Railway用、base64エンコード）
     import base64
     token_b64 = os.getenv("GOOGLE_TOKEN_JSON", "")
-    print(f"[Calendar] GOOGLE_TOKEN_JSON exists: {bool(token_b64)}, length: {len(token_b64)}")
-
     if token_b64:
         try:
             token_json = base64.b64decode(token_b64).decode("utf-8")
             token_data = json.loads(token_json)
             creds = Credentials.from_authorized_user_info(token_data, SCOPES)
-            print(f"[Calendar] creds loaded, valid: {creds.valid}, expired: {creds.expired}")
         except Exception as e:
             print(f"[Calendar] トークン解析エラー: {e}")
     elif TOKEN_PATH.exists():
@@ -37,9 +34,7 @@ def _get_service():
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            print("[Calendar] トークンをリフレッシュ中...")
             creds.refresh(Request())
-            print("[Calendar] リフレッシュ成功")
         else:
             raise RuntimeError("Googleカレンダーの認証トークンがありません。ローカルでauth_google.pyを実行してください。")
 
