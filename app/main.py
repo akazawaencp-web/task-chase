@@ -183,9 +183,8 @@ async def handle_new_task(event: MessageEvent, text: str):
             description=task.get("description", ""),
         )
         task_manager.update_task(task["id"], {"calendar_event_id": event_id})
-        pass
     except Exception as e:
-        pass
+        print(f"[Tasks] 登録エラー: {e}")
 
     # 5. 詳細調査（原文も渡してクオリティを保つ）
     research_result = await research_task(
