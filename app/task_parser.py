@@ -31,7 +31,7 @@ async def parse_task_input(user_text: str) -> dict:
   "description": "補足説明（あれば。なければ空文字）",
   "deadline": "期限（YYYY-MM-DD形式。なければ空文字）",
   "task_type": "review, action, decision のいずれか",
-  "genre": "biz, tool, life, hr, self のいずれか"
+  "genre": "sales, ai, admin, industry, input のいずれか"
 }}
 
 ルール:
@@ -41,7 +41,7 @@ async def parse_task_input(user_text: str) -> dict:
 - 今日の日付は{today}。年が省略されている場合は今日以降の直近の日付にする
 - 期限がない場合はdeadlineを空文字にする
 - task_type: 調べもの・読むだけ→review、行動が必要→action、やるかやらないか判断が必要→decision
-- genre: 事業・集客・営業→biz、ツール・システム・IT→tool、生活・手続き・プライベート→life、人事・法務・労務→hr、自己研鑽・学習→self"""
+- genre: 集客・営業・スカウト・送客・媒体→sales、AI・ツール・CRM・自動化・システム→ai、事務・手続き・免許・法人・経理→admin、業界知識・レポート・面接対策・競合→industry、記事・動画・トレンド・学習インプット→input"""
             }
         ],
     )

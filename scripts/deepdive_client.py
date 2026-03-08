@@ -80,8 +80,19 @@ def update_status(task_id, dashboard_status):
 
 def reclassify():
     """全タスクのジャンル・タイプを再分類"""
-    result = _request("POST", "/api/dashboard/reclassify")
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    url = f"{API_URL}/api/dashboard/reclassify"
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    }
+    req = urllib.request.Request(url, data=b"{}", headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=300) as resp:
+            result = json.loads(resp.read().decode())
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+    except urllib.error.HTTPError as e:
+        print(f"Error {e.code}: {e.read().decode()}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
