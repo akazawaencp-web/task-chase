@@ -427,6 +427,14 @@ body {{
   <div class="task-date">調査日: {today}</div>
 </div>
 
+{f"""<div class="checklist-card">
+  <div class="section-label">
+    <span class="section-dot" style="background: var(--tx3)"></span>
+    RIOの原文
+  </div>
+  <div style="font-size: 13px; line-height: 1.8; color: var(--tx2); white-space: pre-line; padding: 4px 0;">{raw_input}</div>
+</div>""" if raw_input else ""}
+
 <div class="next-action">
   <div class="next-label">Next Action</div>
   <div class="next-text">{research.get("next_action", "")}</div>
