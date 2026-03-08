@@ -78,9 +78,15 @@ def update_status(task_id, dashboard_status):
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
+def reclassify():
+    """全タスクのジャンル・タイプを再分類"""
+    result = _request("POST", "/api/dashboard/reclassify")
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: deepdive_client.py <fetch|upload|skip|notify|update-status> [args...]")
+        print("Usage: deepdive_client.py <fetch|upload|skip|notify|update-status|reclassify> [args...]")
         print()
         print("Commands:")
         print("  fetch                              - 深掘り対象タスク一覧")
@@ -114,6 +120,8 @@ if __name__ == "__main__":
             print("Usage: deepdive_client.py update-status <task_id> <status>", file=sys.stderr)
             sys.exit(1)
         update_status(sys.argv[2], sys.argv[3])
+    elif cmd == "reclassify":
+        reclassify()
     else:
         print(f"Unknown command: {cmd}", file=sys.stderr)
         sys.exit(1)

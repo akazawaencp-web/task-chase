@@ -392,6 +392,28 @@ async def update_dashboard_task(request: Request, _=Depends(verify_api_key)):
     return task
 
 
+@app.post("/api/dashboard/reclassify")
+async def reclassify_all_tasks(_=Depends(verify_api_key)):
+    """全タスクのジャンル・タイプを原文から再分類"""
+    all_tasks = task_manager.get_all_tasks()
+    updated = 0
+    for t in all_tasks:
+        raw = t.get("raw_input", "")
+        if not raw:
+            raw = t.get("title", "") + " " + t.get("description", "")
+        if not raw.strip():
+            continue
+        try:
+            parsed = await parse_task_input(raw)
+            genre = parsed.get("genre", "life")
+            task_type = parsed.get("task_type", "action")
+            task_manager.update_task(t["id"], {"genre": genre, "task_type": task_type})
+            updated += 1
+        except Exception as e:
+            print(f"[Reclassify] Task #{t['id']} failed: {e}")
+    return {"updated": updated, "total": len(all_tasks)}
+
+
 # === スケジューラー ===
 
 scheduler = AsyncIOScheduler()
