@@ -356,6 +356,14 @@ async def update_dashboard_status(request: Request, _=Depends(verify_api_key)):
     task = task_manager.update_task(task_id, updates)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
+
+    # 完了時: Googleカレンダーのタスクも完了にする
+    if new_status == "done" and task.get("calendar_event_id"):
+        try:
+            complete_calendar_task(task["calendar_event_id"])
+        except Exception:
+            pass  # カレンダー連携失敗でもダッシュボード操作は成功扱い
+
     return task
 
 
