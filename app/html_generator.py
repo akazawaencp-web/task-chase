@@ -25,6 +25,17 @@ def generate_report_html(task: dict, research: dict, raw_input: str = "") -> str
     task_type_class = "tag-action" if task.get("task_type") != "research" else "tag-research"
     deadline_tag = f'<span class="task-tag tag-deadline">期限 {task["deadline"]}</span>' if task.get("deadline") else ""
 
+    # 原文セクション生成
+    raw_input_html = ""
+    if raw_input:
+        raw_input_html = f"""<div class="checklist-card">
+  <div class="section-label">
+    <span class="section-dot" style="background: var(--tx3)"></span>
+    RIOの原文
+  </div>
+  <div style="font-size: 13px; line-height: 1.8; color: var(--tx2); white-space: pre-line; padding: 4px 0;">{raw_input}</div>
+</div>"""
+
     # チェックリスト生成
     checklist_html = ""
     for item in research.get("checklist", []):
@@ -427,13 +438,7 @@ body {{
   <div class="task-date">調査日: {today}</div>
 </div>
 
-{f"""<div class="checklist-card">
-  <div class="section-label">
-    <span class="section-dot" style="background: var(--tx3)"></span>
-    RIOの原文
-  </div>
-  <div style="font-size: 13px; line-height: 1.8; color: var(--tx2); white-space: pre-line; padding: 4px 0;">{raw_input}</div>
-</div>""" if raw_input else ""}
+{raw_input_html}
 
 <div class="next-action">
   <div class="next-label">Next Action</div>
