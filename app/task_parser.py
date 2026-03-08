@@ -30,7 +30,8 @@ async def parse_task_input(user_text: str) -> dict:
   "title": "タスクのタイトル（一言に要約）",
   "description": "補足説明（あれば。なければ空文字）",
   "deadline": "期限（YYYY-MM-DD形式。なければ空文字）",
-  "task_type": "action または research"
+  "task_type": "review, action, decision のいずれか",
+  "genre": "biz, tool, life, hr, self のいずれか"
 }}
 
 ルール:
@@ -39,7 +40,8 @@ async def parse_task_input(user_text: str) -> dict:
 - 期限は「来週まで」「4月22日まで」等の自然言語から計算する
 - 今日の日付は{today}。年が省略されている場合は今日以降の直近の日付にする
 - 期限がない場合はdeadlineを空文字にする
-- 行動が必要なタスクはaction、調べもの・考え事はresearch"""
+- task_type: 調べもの・読むだけ→review、行動が必要→action、やるかやらないか判断が必要→decision
+- genre: 事業・集客・営業→biz、ツール・システム・IT→tool、生活・手続き・プライベート→life、人事・法務・労務→hr、自己研鑽・学習→self"""
             }
         ],
     )

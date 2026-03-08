@@ -38,6 +38,9 @@ def add_task(title: str, description: str = "", deadline: str = "", raw_input: s
         "deadline": deadline,
         "raw_input": raw_input,
         "status": "active",
+        "dashboard_status": "unconfirmed",
+        "genre": "",
+        "task_type": "",
         "html_url": "",
         "calendar_event_id": "",
         "created_at": datetime.now().isoformat(),
@@ -66,6 +69,11 @@ def get_active_tasks() -> list[dict]:
     return [t for t in tasks if t["status"] == "active"]
 
 
+def get_all_tasks() -> list[dict]:
+    """全タスクを取得（完了含む）"""
+    return _load_tasks()
+
+
 def get_today_tasks() -> list[dict]:
     """今日やるべきタスクを完了しやすい順で取得"""
     active = get_active_tasks()
@@ -91,6 +99,7 @@ def complete_task(task_id: int) -> dict | None:
     for t in tasks:
         if t["id"] == task_id:
             t["status"] = "completed"
+            t["dashboard_status"] = "done"
             t["completed_at"] = datetime.now().isoformat()
             _save_tasks(tasks)
             return t

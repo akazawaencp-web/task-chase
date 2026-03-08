@@ -69,15 +69,26 @@ def notify(message):
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
+def update_status(task_id, dashboard_status):
+    """タスクのダッシュボードステータスを更新"""
+    result = _request("POST", "/api/dashboard/update-status", {
+        "task_id": int(task_id),
+        "dashboard_status": dashboard_status,
+    })
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: deepdive_client.py <fetch|upload|skip|notify> [args...]")
+        print("Usage: deepdive_client.py <fetch|upload|skip|notify|update-status> [args...]")
         print()
         print("Commands:")
-        print("  fetch                          - 深掘り対象タスク一覧")
-        print("  upload <task_id> <html> <name>  - HTMLアップロード")
-        print("  skip <task_id>                  - タスクスキップ")
-        print("  notify <message>                - LINE通知送信")
+        print("  fetch                              - 深掘り対象タスク一覧")
+        print("  upload <task_id> <html> <name>      - HTMLアップロード")
+        print("  skip <task_id>                      - タスクスキップ")
+        print("  notify <message>                    - LINE通知送信")
+        print("  update-status <task_id> <status>    - ダッシュボードステータス更新")
+        print("    status: unconfirmed/confirmed/reinvestigate/execute/done")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -98,6 +109,11 @@ if __name__ == "__main__":
             print("Usage: deepdive_client.py notify <message>", file=sys.stderr)
             sys.exit(1)
         notify(" ".join(sys.argv[2:]))
+    elif cmd == "update-status":
+        if len(sys.argv) < 4:
+            print("Usage: deepdive_client.py update-status <task_id> <status>", file=sys.stderr)
+            sys.exit(1)
+        update_status(sys.argv[2], sys.argv[3])
     else:
         print(f"Unknown command: {cmd}", file=sys.stderr)
         sys.exit(1)

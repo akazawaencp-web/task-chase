@@ -9,6 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request, HTTPException, Depends, Header
 from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from linebot.v3.webhook import WebhookParser
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
@@ -23,6 +24,14 @@ from app.github_pages import publish_report
 from app.calendar_service import add_task_to_calendar, complete_calendar_task
 
 app = FastAPI(title="Task Chase System")
+
+# CORS設定（ダッシュボードからのAPI呼び出しを許可）
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
 
 # HTML配信用: /reports/ でHTMLファイルにアクセス可能にする
 REPORTS_DIR = Path(os.getenv("DATA_DIR", "/tmp/task-chase-data") + "/reports")
@@ -175,6 +184,11 @@ async def handle_new_task(event: MessageEvent, text: str):
         raw_input=text,
     )
     task["task_type"] = parsed.get("task_type", "action")
+    task["genre"] = parsed.get("genre", "life")
+    task_manager.update_task(task["id"], {
+        "task_type": task["task_type"],
+        "genre": task["genre"],
+    })
 
     # 4. Google Tasksに登録（タイムアウト付き、失敗しても調査・通知は続行）
     try:
@@ -314,6 +328,56 @@ async def notify_deepdive(request: Request, _=Depends(verify_api_key)):
     return {"status": "no_user_id"}
 
 
+# === Dashboard API ===
+
+@app.get("/api/dashboard/tasks")
+async def get_dashboard_tasks(_=Depends(verify_api_key)):
+    """ダッシュボード用: 全タスク一覧（完了含む）"""
+    return task_manager.get_all_tasks()
+
+
+@app.post("/api/dashboard/update-status")
+async def update_dashboard_status(request: Request, _=Depends(verify_api_key)):
+    """ダッシュボード用: タスクのステータスを更新"""
+    data = await request.json()
+    task_id = data["task_id"]
+    new_status = data["dashboard_status"]
+
+    valid = ("unconfirmed", "confirmed", "reinvestigate", "execute", "done")
+    if new_status not in valid:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Use: {valid}")
+
+    updates = {"dashboard_status": new_status}
+    if new_status == "done":
+        from datetime import datetime
+        updates["status"] = "completed"
+        updates["completed_at"] = datetime.now().isoformat()
+
+    task = task_manager.update_task(task_id, updates)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task
+
+
+@app.post("/api/dashboard/update-task")
+async def update_dashboard_task(request: Request, _=Depends(verify_api_key)):
+    """ダッシュボード用: タスクのジャンル・タイプを更新"""
+    data = await request.json()
+    task_id = data["task_id"]
+    updates = {}
+    if "genre" in data:
+        updates["genre"] = data["genre"]
+    if "task_type" in data:
+        updates["task_type"] = data["task_type"]
+    if not updates:
+        raise HTTPException(status_code=400, detail="No updates provided")
+
+    task = task_manager.update_task(task_id, updates)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task
+
+
 # === スケジューラー ===
 
 scheduler = AsyncIOScheduler()
@@ -375,4 +439,4 @@ async def root():
 @app.get("/tasks")
 async def list_tasks():
     """タスク一覧API（デバッグ用）"""
-    return task_manager.get_active_tasks()
+    return task_manager.get_all_tasks()
