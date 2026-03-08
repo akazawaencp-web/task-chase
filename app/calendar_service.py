@@ -118,3 +118,17 @@ def complete_calendar_task(task_id: str):
         task=task_id,
         body={"status": "completed"},
     ).execute()
+
+
+def reopen_calendar_task(task_id: str):
+    """Google Tasksの完了タスクを未完了に戻す"""
+    if not task_id:
+        return
+
+    service = _get_tasks_service()
+
+    service.tasks().patch(
+        tasklist="@default",
+        task=task_id,
+        body={"status": "needsAction"},
+    ).execute()

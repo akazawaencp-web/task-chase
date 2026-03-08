@@ -21,7 +21,7 @@ from app.task_parser import parse_task_input
 from app.research import research_task
 from app.html_generator import generate_report_html
 from app.github_pages import publish_report
-from app.calendar_service import add_task_to_calendar, complete_calendar_task
+from app.calendar_service import add_task_to_calendar, complete_calendar_task, reopen_calendar_task
 
 app = FastAPI(title="Task Chase System")
 
@@ -352,15 +352,21 @@ async def update_dashboard_status(request: Request, _=Depends(verify_api_key)):
         from datetime import datetime
         updates["status"] = "completed"
         updates["completed_at"] = datetime.now().isoformat()
+    else:
+        updates["status"] = "active"
+        updates["completed_at"] = ""
 
     task = task_manager.update_task(task_id, updates)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # 完了時: Googleカレンダーのタスクも完了にする
-    if new_status == "done" and task.get("calendar_event_id"):
+    # Googleカレンダー連携
+    if task.get("calendar_event_id"):
         try:
-            complete_calendar_task(task["calendar_event_id"])
+            if new_status == "done":
+                complete_calendar_task(task["calendar_event_id"])
+            else:
+                reopen_calendar_task(task["calendar_event_id"])
         except Exception:
             pass  # カレンダー連携失敗でもダッシュボード操作は成功扱い
 
