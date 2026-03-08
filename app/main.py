@@ -439,6 +439,14 @@ async def startup():
     scheduler.add_job(scheduled_monthly_report, "cron", day=1, hour=9, minute=0)
     scheduler.start()
 
+    # 起動通知（クラッシュからの復旧を検知するため）
+    user_id = load_user_id()
+    if user_id:
+        try:
+            line_handler.push_text(user_id, "Task Chase System が起動しました。")
+        except Exception:
+            pass
+
 
 @app.get("/robots.txt", response_class=PlainTextResponse)
 async def robots_txt():
