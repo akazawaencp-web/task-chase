@@ -322,10 +322,13 @@ async def notify_deepdive(request: Request, _=Depends(verify_api_key)):
     """LINE通知を送信"""
     data = await request.json()
     user_id = load_user_id()
-    if user_id:
+    if not user_id:
+        return {"status": "no_user_id"}
+    try:
         line_handler.push_text(user_id, data["message"])
         return {"status": "sent"}
-    return {"status": "no_user_id"}
+    except Exception as e:
+        return {"status": "error", "detail": str(e), "user_id_len": len(user_id)}
 
 
 # === Dashboard API ===
