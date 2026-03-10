@@ -490,6 +490,21 @@ async def startup():
             pass
 
 
+@app.post("/api/reports/upload")
+async def upload_report_html(request: Request, _=Depends(verify_api_key)):
+    """汎用HTMLアップロード（/reports/ にファイルを配置）"""
+    data = await request.json()
+    filename = data["filename"]
+    html_content = data["html_content"]
+    if "/" in filename or "\\" in filename:
+        return {"error": "filename must not contain path separators"}, 400
+    filepath = REPORTS_DIR / filename
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(html_content)
+    url = f"{os.getenv('RAILWAY_PUBLIC_URL', '')}/reports/{filename}"
+    return {"url": url, "filename": filename}
+
+
 @app.get("/robots.txt", response_class=PlainTextResponse)
 async def robots_txt():
     return "User-agent: *\nDisallow: /reports/\n"
