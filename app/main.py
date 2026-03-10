@@ -168,15 +168,12 @@ async def handle_message(event: MessageEvent, text: str):
 
 
 async def handle_new_task(event: MessageEvent, text: str):
-    """新しいタスクを登録→調査→HTML生成→LINE通知"""
+    """新しいタスクを登録→タイトル生成→reply通知（簡易調査・HTML生成は省略、deepdiveで対応）"""
 
-    # 1. 登録中メッセージ
-    line_handler.reply_text(event, "タスクを登録中...")
-
-    # 2. テキストからタスク情報を抽出
+    # 1. テキストからタスク情報を抽出（タイトル・ジャンル・タイプ分類）
     parsed = await parse_task_input(text)
 
-    # 3. タスクDB登録
+    # 2. タスクDB登録
     task = task_manager.add_task(
         title=parsed["title"],
         description=parsed.get("description", ""),
@@ -190,7 +187,7 @@ async def handle_new_task(event: MessageEvent, text: str):
         "genre": task["genre"],
     })
 
-    # 4. Google Tasksに登録（タイムアウト付き、失敗しても調査・通知は続行）
+    # 3. Google Tasksに登録（タイムアウト付き）
     try:
         event_id = await asyncio.wait_for(
             asyncio.get_event_loop().run_in_executor(
@@ -209,35 +206,12 @@ async def handle_new_task(event: MessageEvent, text: str):
     except Exception as e:
         print(f"[Tasks] 登録エラー: {e}")
 
-    # 5. 詳細調査（原文も渡してクオリティを保つ）
-    research_result = await research_task(
-        title=task["title"],
-        description=task.get("description", ""),
-        task_type=task.get("task_type", "action"),
-        raw_input=text,
+    # 4. LINE返信（reply_text = プッシュメッセージ消費なし）
+    deadline_str = f"\n期限: {task['deadline']}" if task.get("deadline") else ""
+    line_handler.reply_text(
+        event,
+        f"タスク登録しました\n\n[{task['id']}] {task['title']}{deadline_str}\n\n深掘り調査はdeepdiveで実行してください。",
     )
-
-    # 6. HTML生成（原文も渡して深掘りプロンプトを生成）
-    html_path = generate_report_html(task, research_result, raw_input=text)
-
-    # 7. GitHub Pagesにデプロイ
-    html_url = publish_report(html_path)
-
-    if html_url:
-        task_manager.update_task(task["id"], {"html_url": html_url})
-
-    # 8. LINE通知（プッシュメッセージ）
-    user_id = event.source.user_id
-    if html_url:
-        line_handler.push_text(
-            user_id,
-            line_handler.format_task_researched(task, html_url),
-        )
-    else:
-        line_handler.push_text(
-            user_id,
-            f"[{task['id']}] {task['title']} を登録しました。\n\n調査結果の公開に失敗しました。再度試してください。",
-        )
 
 
 async def handle_complete(event: MessageEvent, task_id: int):
@@ -484,13 +458,7 @@ async def startup():
     scheduler.add_job(scheduled_monthly_report, "cron", day=1, hour=9, minute=0)
     scheduler.start()
 
-    # 起動通知（クラッシュからの復旧を検知するため）
-    user_id = load_user_id()
-    if user_id:
-        try:
-            line_handler.push_text(user_id, "Task Chase System が起動しました。")
-        except Exception:
-            pass
+    # 起動通知は削除（プッシュメッセージ消費を削減するため）
 
 
 @app.post("/api/reports/upload")
