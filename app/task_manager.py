@@ -45,6 +45,7 @@ def add_task(title: str, description: str = "", deadline: str = "", raw_input: s
         "calendar_event_id": "",
         "created_at": datetime.now().isoformat(),
         "completed_at": "",
+        "is_working": False,
         "chase_count": 0,
         "postpone_count": 0,
         "last_chased_at": "",

@@ -352,6 +352,7 @@ async def update_dashboard_status(request: Request, _=Depends(verify_api_key)):
         from datetime import datetime
         updates["status"] = "completed"
         updates["completed_at"] = datetime.now().isoformat()
+        updates["is_working"] = False
     else:
         updates["status"] = "active"
         updates["completed_at"] = ""
@@ -370,6 +371,25 @@ async def update_dashboard_status(request: Request, _=Depends(verify_api_key)):
         except Exception:
             pass  # カレンダー連携失敗でもダッシュボード操作は成功扱い
 
+    return task
+
+
+@app.post("/api/dashboard/toggle-working")
+async def toggle_working(request: Request, _=Depends(verify_api_key)):
+    """ダッシュボード用: タスクの実行中フラグを切り替え"""
+    data = await request.json()
+    task_id = data["task_id"]
+    is_working = data.get("is_working")
+
+    current = task_manager.get_task(task_id)
+    if not current:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # 値が指定されていなければトグル
+    if is_working is None:
+        is_working = not current.get("is_working", False)
+
+    task = task_manager.update_task(task_id, {"is_working": is_working})
     return task
 
 

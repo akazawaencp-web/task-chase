@@ -95,9 +95,19 @@ def reclassify():
         sys.exit(1)
 
 
+def toggle_working(task_id, is_working=None):
+    """タスクの実行中フラグを切り替え"""
+    payload = {"task_id": int(task_id)}
+    if is_working is not None:
+        payload["is_working"] = is_working
+    result = _request("POST", "/api/dashboard/toggle-working", payload)
+    status = "実行中" if result.get("is_working") else "停止"
+    print(f"Task #{task_id}: {status}")
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: deepdive_client.py <fetch|upload|skip|notify|update-status|reclassify> [args...]")
+        print("Usage: deepdive_client.py <fetch|upload|skip|notify|update-status|working|reclassify> [args...]")
         print()
         print("Commands:")
         print("  fetch                              - 深掘り対象タスク一覧")
@@ -106,6 +116,7 @@ if __name__ == "__main__":
         print("  notify <message>                    - LINE通知送信")
         print("  update-status <task_id> <status>    - ダッシュボードステータス更新")
         print("    status: unconfirmed/confirmed/reinvestigate/execute/done")
+        print("  working <task_id> [on|off]          - 実行中マーク切り替え")
         sys.exit(1)
 
     cmd = sys.argv[1]
@@ -131,6 +142,14 @@ if __name__ == "__main__":
             print("Usage: deepdive_client.py update-status <task_id> <status>", file=sys.stderr)
             sys.exit(1)
         update_status(sys.argv[2], sys.argv[3])
+    elif cmd == "working":
+        if len(sys.argv) < 3:
+            print("Usage: deepdive_client.py working <task_id> [on|off]", file=sys.stderr)
+            sys.exit(1)
+        w = None
+        if len(sys.argv) >= 4:
+            w = sys.argv[3].lower() == "on"
+        toggle_working(sys.argv[2], w)
     elif cmd == "reclassify":
         reclassify()
     else:
