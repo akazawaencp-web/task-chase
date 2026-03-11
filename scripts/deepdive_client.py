@@ -95,6 +95,18 @@ def reclassify():
         sys.exit(1)
 
 
+def check_request():
+    """手動Deep Diveリクエストの有無を確認"""
+    result = _request("GET", "/api/deepdive/check-request")
+    print(json.dumps(result, ensure_ascii=False))
+
+
+def clear_request():
+    """Deep Diveリクエストフラグをクリア"""
+    result = _request("POST", "/api/deepdive/clear-request")
+    print(json.dumps(result, ensure_ascii=False))
+
+
 def toggle_working(task_id, is_working=None):
     """タスクの実行中フラグを切り替え"""
     payload = {"task_id": int(task_id)}
@@ -107,13 +119,15 @@ def toggle_working(task_id, is_working=None):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: deepdive_client.py <fetch|upload|skip|notify|update-status|working|reclassify> [args...]")
+        print("Usage: deepdive_client.py <fetch|upload|skip|notify|check-request|clear-request|update-status|working|reclassify> [args...]")
         print()
         print("Commands:")
         print("  fetch                              - 深掘り対象タスク一覧")
         print("  upload <task_id> <html> <name>      - HTMLアップロード")
         print("  skip <task_id>                      - タスクスキップ")
         print("  notify <message>                    - LINE通知送信")
+        print("  check-request                      - 手動Deep Diveリクエスト確認")
+        print("  clear-request                      - Deep Diveリクエストフラグクリア")
         print("  update-status <task_id> <status>    - ダッシュボードステータス更新")
         print("    status: unconfirmed/confirmed/reinvestigate/execute/done")
         print("  working <task_id> [on|off]          - 実行中マーク切り替え")
@@ -150,6 +164,10 @@ if __name__ == "__main__":
         if len(sys.argv) >= 4:
             w = sys.argv[3].lower() == "on"
         toggle_working(sys.argv[2], w)
+    elif cmd == "check-request":
+        check_request()
+    elif cmd == "clear-request":
+        clear_request()
     elif cmd == "reclassify":
         reclassify()
     else:

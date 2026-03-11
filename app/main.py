@@ -1,9 +1,11 @@
 """メインアプリ: FastAPI + LINE Webhook + スケジューラー"""
 
 import asyncio
+import json
 import os
 import re
 
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, Request, HTTPException, Depends, Header
@@ -152,6 +154,20 @@ async def handle_message(event: MessageEvent, text: str):
             line_handler.reply_text(event, "今日やるタスクはありません。")
         return
 
+    # 手動Deep Dive リクエスト
+    if "深掘り" in text or "deepdive" in text.lower():
+        request_file = Path(os.getenv("DATA_DIR", "/tmp/task-chase-data")) / "deepdive-request.json"
+        request_data = {
+            "requested_at": datetime.now().isoformat(),
+            "status": "pending",
+        }
+        request_file.write_text(json.dumps(request_data, ensure_ascii=False))
+        line_handler.reply_text(
+            event,
+            "深掘りリクエスト受付しました。\n数分以内にClaude Codeが起動して処理を開始します。",
+        )
+        return
+
     # あとでやる
     if text in ["あとで", "あとでやる", "明日"]:
         tasks = task_manager.get_active_tasks()
@@ -289,6 +305,36 @@ async def skip_deepdive(request: Request, _=Depends(verify_api_key)):
     data = await request.json()
     task_manager.update_task(data["task_id"], {"deepdive_status": "skipped"})
     return {"status": "skipped"}
+
+
+@app.get("/api/deepdive/check-request")
+async def check_deepdive_request(_=Depends(verify_api_key)):
+    """手動Deep Diveリクエストの有無を確認"""
+    request_file = Path(os.getenv("DATA_DIR", "/tmp/task-chase-data")) / "deepdive-request.json"
+    if not request_file.exists():
+        return {"requested": False}
+
+    try:
+        data = json.loads(request_file.read_text())
+    except (json.JSONDecodeError, OSError):
+        return {"requested": False}
+
+    if data.get("status") == "pending":
+        # フラグを processing に更新（二重実行防止）
+        data["status"] = "processing"
+        request_file.write_text(json.dumps(data, ensure_ascii=False))
+        return {"requested": True, "requested_at": data.get("requested_at", "")}
+
+    return {"requested": False}
+
+
+@app.post("/api/deepdive/clear-request")
+async def clear_deepdive_request(_=Depends(verify_api_key)):
+    """Deep Diveリクエストフラグをクリア"""
+    request_file = Path(os.getenv("DATA_DIR", "/tmp/task-chase-data")) / "deepdive-request.json"
+    if request_file.exists():
+        request_file.unlink()
+    return {"status": "cleared"}
 
 
 @app.post("/api/deepdive/notify")
