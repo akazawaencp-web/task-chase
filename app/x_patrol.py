@@ -71,8 +71,10 @@ def add_to_checked(urls):
 def _parse_grok_response(result: dict) -> list[dict]:
     """Grok APIのレスポンスからX投稿情報を抽出する
 
-    Grokはテキスト形式で結果を返し、URLはannotationsに含まれる。
-    テキストからアカウント名・投稿内容を、annotationsからURLを抽出する。
+    Grokはテキスト形式で結果を返す。フォーマットは以下のいずれか:
+    - "1. **@username** ..." （番号リスト）
+    - "- **@username**: ..." （箇条書き）
+    annotationsにX投稿のURLが含まれる。
     """
     posts = []
     text = ""
@@ -97,42 +99,59 @@ def _parse_grok_response(result: dict) -> list[dict]:
         if "x.com/" in url or "twitter.com/" in url:
             x_urls.append(url)
 
-    # テキストを投稿ごとに分割（番号パターンで区切り）
-    # "1. **@username**" や "1." のパターンで分割
-    entries = re.split(r'\n\d+\.\s+', text)
+    # テキストを投稿ごとに分割
+    # パターン1: "- **@username**" (箇条書き)
+    # パターン2: "1. **@username**" (番号リスト)
+    # パターン3: "**@username**" (太字のみ)
+    entries = re.split(r'\n(?=- \*\*@|\d+\.\s+\*\*@)', text)
 
-    for i, entry in enumerate(entries):
-        if not entry.strip():
+    url_index = 0
+    for entry in entries:
+        entry = entry.strip()
+        if not entry:
             continue
 
-        # ユーザー名を抽出（**@username** パターン）
-        author_match = re.search(r'@(\w+)', entry)
-        author = author_match.group(1) if author_match else "unknown"
+        # ユーザー名を抽出（**@username** または @username パターン）
+        author_match = re.search(r'\*\*@(\w+)\*\*|@(\w+)', entry)
+        if not author_match:
+            continue
+        author = author_match.group(1) or author_match.group(2)
 
-        # 投稿テキストを抽出（ユーザー名・日時行以降の本文）
-        # 改行で分割して、本文部分を結合
-        lines = entry.strip().split('\n')
-        post_text_lines = []
-        for line in lines:
-            line = line.strip()
-            # メタ情報行をスキップ
-            if line.startswith('**@') or line.startswith('(') or not line:
-                continue
-            # URLアノテーションの参照を除去
-            line = re.sub(r'\[\[\d+\]\]\(https?://[^\)]+\)', '', line)
-            if line:
-                post_text_lines.append(line)
-        post_text = '\n'.join(post_text_lines)
+        # 投稿テキストを抽出
+        # "- **@username**: \"本文\"" や "- **@username** (日時): 本文" 等
+        # まずクォート内のテキストを試す
+        quote_match = re.search(r'["\u201c](.*?)["\u201d]', entry, re.DOTALL)
+        if quote_match:
+            post_text = quote_match.group(1)
+        else:
+            # クォートがなければ、ユーザー名以降のテキスト全体
+            post_text = re.sub(r'^[-\d.]*\s*\*\*@\w+\*\*[^:]*:\s*', '', entry)
 
-        # このエントリに対応するURLを取得
-        url = x_urls[i - 1] if 0 < i <= len(x_urls) else ""
+        # URLアノテーション参照を除去
+        post_text = re.sub(r'\[\[\d+\]\]\(https?://[^\)]+\)', '', post_text)
+        post_text = post_text.strip()
+
+        # このエントリに対応するX URLを取得
+        url = x_urls[url_index] if url_index < len(x_urls) else ""
+        # annotationsのURLがこのエントリ内に参照されているか確認
+        entry_has_url = False
+        while url_index < len(x_urls):
+            if x_urls[url_index] in entry or url_index == 0:
+                url = x_urls[url_index]
+                url_index += 1
+                entry_has_url = True
+                break
+            url_index += 1
+
+        if not entry_has_url and url_index < len(x_urls):
+            url = x_urls[url_index]
+            url_index += 1
 
         # 外部リンクのドメインを抽出
         link_domains = []
-        ext_urls = re.findall(r'https?://([^/\s\)]+)', entry)
+        ext_urls = re.findall(r'https?://([^/\s\)"]+)', entry)
         for domain in ext_urls:
             if 'x.com' not in domain and 'twitter.com' not in domain:
-                # サブドメインを含む形で記録
                 link_domains.append(domain)
 
         if post_text or url:
