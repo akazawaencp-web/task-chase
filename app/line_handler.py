@@ -48,34 +48,34 @@ def push_text(user_id: str, text: str):
 def format_task_registered(task: dict) -> str:
     """タスク登録完了メッセージ"""
     deadline_str = f"\n期限: {task['deadline']}" if task.get("deadline") else ""
-    return f"""タスク登録しました
+    return f"""了解、追加したよ
 
 [{task['id']}] {task['title']}{deadline_str}
 
-調査中です。完了したらリンクを送ります。"""
+深掘りしたかったら「深掘りして」って送ってね"""
 
 
 def format_task_researched(task: dict, html_url: str) -> str:
     """調査完了メッセージ"""
-    return f"""[{task['id']}] {task['title']} の調査が完了しました
+    return f"""[{task['id']}] {task['title']} の調査終わったよ
 
-詳細はこちら:
+詳しくはこっち見てね
 {html_url}
 
-完了したら「{task['id']}完了」と送ってください。"""
+終わったら「{task['id']}完了」って送ってね"""
 
 
 def format_task_completed(task: dict) -> str:
     """タスク完了メッセージ"""
-    return f"""[{task['id']}] {task['title']} を完了にしました。
+    return f"""[{task['id']}] {task['title']} 完了にしたよ
 
-お疲れさまでした。"""
+おつかれ!"""
 
 
 def format_task_list(tasks: list[dict]) -> str:
     """タスク一覧メッセージ"""
     if not tasks:
-        return "未完了のタスクはありません。"
+        return "今タスクないよ"
 
     lines = ["-- 未完了タスク --\n"]
     for t in tasks:

@@ -111,9 +111,9 @@ async def handle_message(event: MessageEvent, text: str):
                     )
                 )
             quick_reply = QuickReply(items=items)
-            line_handler.reply_text(event, "完了したタスクをタップしてね!", quick_reply=quick_reply)
+            line_handler.reply_text(event, "どれが終わった?", quick_reply=quick_reply)
         else:
-            line_handler.reply_text(event, "未完了のタスクはありません。")
+            line_handler.reply_text(event, "今タスクないよ")
         return
 
     # 今週のまとめ
@@ -151,7 +151,7 @@ async def handle_message(event: MessageEvent, text: str):
 
             line_handler.reply_text(event, f"{task_list}\n\n{chase_msg}")
         else:
-            line_handler.reply_text(event, "今日やるタスクはありません。")
+            line_handler.reply_text(event, "今日やるタスクないよ")
         return
 
     # 手動Deep Dive リクエスト（「深掘り」「deepdive」単体の時だけ反応）
@@ -164,7 +164,7 @@ async def handle_message(event: MessageEvent, text: str):
         request_file.write_text(json.dumps(request_data, ensure_ascii=False))
         line_handler.reply_text(
             event,
-            "深掘りリクエスト受付しました。\n数分以内にClaude Codeが起動して処理を開始します。",
+            "深掘りリクエスト了解!\n数分以内にClaude Codeが動き出すよ",
         )
         return
 
@@ -174,9 +174,9 @@ async def handle_message(event: MessageEvent, text: str):
         if tasks:
             latest = tasks[-1]
             task_manager.postpone_task(latest["id"])
-            line_handler.reply_text(event, f"[{latest['id']}] {latest['title']} を明日に回しました。")
+            line_handler.reply_text(event, f"[{latest['id']}] {latest['title']} を明日に回したよ")
         else:
-            line_handler.reply_text(event, "未完了のタスクはありません。")
+            line_handler.reply_text(event, "今タスクないよ")
         return
 
     # それ以外はタスク登録として処理
@@ -198,10 +198,16 @@ async def handle_new_task(event: MessageEvent, text: str):
     )
     task["task_type"] = parsed.get("task_type", "action")
     task["genre"] = parsed.get("genre", "life")
-    task_manager.update_task(task["id"], {
+    update_fields = {
         "task_type": task["task_type"],
         "genre": task["genre"],
-    })
+    }
+
+    # 「登録だけ」が含まれていたらDeepDive対象外にする
+    if "登録だけ" in text:
+        update_fields["deepdive_status"] = "skipped"
+
+    task_manager.update_task(task["id"], update_fields)
 
     # 3. Google Tasksに登録（タイムアウト付き）
     try:
@@ -226,7 +232,7 @@ async def handle_new_task(event: MessageEvent, text: str):
     deadline_str = f"\n期限: {task['deadline']}" if task.get("deadline") else ""
     line_handler.reply_text(
         event,
-        f"タスク登録しました\n\n[{task['id']}] {task['title']}{deadline_str}\n\n深掘り調査はdeepdiveで実行してください。",
+        f"了解、追加したよ\n\n[{task['id']}] {task['title']}{deadline_str}\n\n深掘りしたかったら「深掘りして」って送ってね",
     )
 
 
@@ -234,7 +240,7 @@ async def handle_complete(event: MessageEvent, task_id: int):
     """タスク完了処理"""
     task = task_manager.get_task(task_id)
     if not task:
-        line_handler.reply_text(event, f"タスク [{task_id}] が見つかりません。")
+        line_handler.reply_text(event, f"タスク [{task_id}] 見つからないよ")
         return
 
     # タスクDB完了
@@ -254,7 +260,7 @@ async def handle_complete(event: MessageEvent, task_id: int):
     remaining = task_manager.get_active_tasks()
     if remaining:
         next_task = remaining[0]
-        msg += f"\n\n次はこれどうですか?\n[{next_task['id']}] {next_task['title']}"
+        msg += f"\n\n次これどう?\n[{next_task['id']}] {next_task['title']}"
 
     line_handler.reply_text(event, msg)
 
