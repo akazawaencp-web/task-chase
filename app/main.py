@@ -616,22 +616,28 @@ async def submit_patrol_selections(request: Request):
 @app.post("/api/patrol/run")
 async def manual_patrol_run():
     """X巡回を手動で即時実行するデバッグ用エンドポイント"""
+    import asyncio
     print("[XPatrol] 手動実行リクエスト受信")
 
-    # デバッグ: APIキーの存在確認（値は出さない）
     has_key = bool(Config.XAI_API_KEY)
     print(f"[XPatrol] XAI_API_KEY設定済み: {has_key}")
 
-    # 1キーワードだけでテスト
+    # まず1キーワードだけでテスト（タイムアウト防止）
     test_posts = await x_patrol.search_x("Claude Code tips", Config.XAI_API_KEY)
 
-    # 全巡回も実行
-    candidates = await x_patrol.run_patrol(Config.XAI_API_KEY)
-
     return {
-        "status": "patrol completed",
+        "status": "test completed",
         "has_api_key": has_key,
         "test_query_results": len(test_posts),
         "test_sample": test_posts[:2] if test_posts else [],
-        "total_candidates": len(candidates),
     }
+
+
+@app.post("/api/patrol/run-full")
+async def full_patrol_run():
+    """X巡回フル実行（バックグラウンド）"""
+    import asyncio
+    print("[XPatrol] フル巡回リクエスト受信")
+    # バックグラウンドで実行（HTTPレスポンスはすぐ返す）
+    asyncio.create_task(run_x_patrol())
+    return {"status": "patrol started in background"}
