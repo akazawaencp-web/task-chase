@@ -111,9 +111,9 @@ async def handle_message(event: MessageEvent, text: str):
                     )
                 )
             quick_reply = QuickReply(items=items)
-            line_handler.reply_text(event, "どれが終わった?!", quick_reply=quick_reply)
+            line_handler.reply_text(event, "どれが終わった？！", quick_reply=quick_reply)
         else:
-            line_handler.reply_text(event, "今タスクないよ!")
+            line_handler.reply_text(event, "今タスクないよ！")
         return
 
     # 今週のまとめ
@@ -151,7 +151,7 @@ async def handle_message(event: MessageEvent, text: str):
 
             line_handler.reply_text(event, f"{task_list}\n\n{chase_msg}")
         else:
-            line_handler.reply_text(event, "今日やるタスクないよ!")
+            line_handler.reply_text(event, "今日やるタスクないよ！")
         return
 
     # 手動Deep Dive リクエスト（「深掘り」「deepdive」単体の時だけ反応）
@@ -164,7 +164,7 @@ async def handle_message(event: MessageEvent, text: str):
         request_file.write_text(json.dumps(request_data, ensure_ascii=False))
         line_handler.reply_text(
             event,
-            "深掘りリクエスト了解!\n数分以内にClaude Codeが動き出すよ",
+            "深掘りリクエスト了解！\n数分以内にClaude Codeが動き出すよ",
         )
         return
 
@@ -174,9 +174,9 @@ async def handle_message(event: MessageEvent, text: str):
         if tasks:
             latest = tasks[-1]
             task_manager.postpone_task(latest["id"])
-            line_handler.reply_text(event, f"[{latest['id']}] {latest['title']} を明日に回したよ!")
+            line_handler.reply_text(event, f"[{latest['id']}] {latest['title']} を明日に回したよ！")
         else:
-            line_handler.reply_text(event, "今タスクないよ!")
+            line_handler.reply_text(event, "今タスクないよ！")
         return
 
     # それ以外はタスク登録として処理
@@ -232,9 +232,9 @@ async def handle_new_task(event: MessageEvent, text: str):
     deadline_str = f"\n期限: {task['deadline']}" if task.get("deadline") else ""
     skip_deepdive = "登録だけ" in text
     if skip_deepdive:
-        reply_msg = f"了解、登録だけしたよ!\n\n[{task['id']}] {task['title']}{deadline_str}"
+        reply_msg = f"了解、登録だけしたよ！\n\n[{task['id']}] {task['title']}{deadline_str}"
     else:
-        reply_msg = f"了解、追加したよ!\n\n[{task['id']}] {task['title']}{deadline_str}\n\n深掘りしたかったら「深掘りして」って送ってね!"
+        reply_msg = f"了解、追加したよ！\n\n[{task['id']}] {task['title']}{deadline_str}\n\n深掘りしたかったら「深掘りして」って送ってね！"
     line_handler.reply_text(event, reply_msg)
 
 
@@ -242,7 +242,7 @@ async def handle_complete(event: MessageEvent, task_id: int):
     """タスク完了処理"""
     task = task_manager.get_task(task_id)
     if not task:
-        line_handler.reply_text(event, f"タスク [{task_id}] 見つからないよ!")
+        line_handler.reply_text(event, f"タスク [{task_id}] 見つからないよ！")
         return
 
     # タスクDB完了
@@ -262,7 +262,7 @@ async def handle_complete(event: MessageEvent, task_id: int):
     remaining = task_manager.get_active_tasks()
     if remaining:
         next_task = remaining[0]
-        msg += f"\n\n次これどう?!\n[{next_task['id']}] {next_task['title']}"
+        msg += f"\n\n次これどう？！\n[{next_task['id']}] {next_task['title']}"
 
     line_handler.reply_text(event, msg)
 
