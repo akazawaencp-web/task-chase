@@ -568,7 +568,7 @@ async def run_x_patrol():
     filename = Path(filepath).name
 
     # /reports/ 経由でアクセス可能なURLを生成
-    base_url = os.getenv("RAILWAY_PUBLIC_URL", "")
+    base_url = os.getenv("RAILWAY_PUBLIC_URL", "https://web-production-5d00d.up.railway.app")
     report_url = f"{base_url}/reports/{filename}"
 
     print(f"[XPatrol] レポート生成: {report_url}")
