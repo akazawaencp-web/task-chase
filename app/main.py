@@ -628,7 +628,7 @@ async def manual_patrol_run():
 @app.get("/api/patrol/status")
 async def patrol_status():
     """最新の巡回レポートの状態を確認"""
-    reports_dir = DATA_DIR / "reports"
+    reports_dir = REPORTS_DIR
     if not reports_dir.exists():
         return {"status": "no reports yet"}
     patrol_files = sorted(reports_dir.glob("patrol-*.html"), reverse=True)
