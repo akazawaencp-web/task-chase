@@ -183,9 +183,16 @@ async def search_x(query: str, api_key: str) -> list[dict]:
                     "model": "grok-4-1-fast-reasoning",
                     "input": (
                         f"Search X/Twitter for recent posts (last 24 hours) about: {query}\n\n"
-                        "List each post with the author's @username, the full post text, "
-                        "and any external links mentioned in the post. "
-                        "Include as many relevant posts as you can find from the last 24 hours."
+                        "IMPORTANT INSTRUCTIONS:\n"
+                        "1. Prioritize posts with high engagement (many likes, retweets, impressions)\n"
+                        "2. Focus on posts that contain useful explanations, tutorials, tips, or tool introductions\n"
+                        "3. Skip short reaction posts like 'amazing!' or 'cool!' that don't add value\n"
+                        "4. For EACH post, provide:\n"
+                        "   - Author's @username\n"
+                        "   - The post content translated into Japanese (if originally in English or other non-Japanese language)\n"
+                        "   - Any external links mentioned\n"
+                        "5. Format: number each post as '1. **@username**: content'\n"
+                        "6. Do NOT include duplicate posts\n"
                     ),
                     "tools": [{"type": "x_search"}],
                 },
@@ -231,18 +238,39 @@ def _is_quality_post(post: dict) -> bool:
     return False
 
 
+def _normalize_x_url(url: str) -> str:
+    """X投稿URLを正規化する（/i/status/xxx と /user/status/xxx を同一視）"""
+    # status IDを抽出
+    match = re.search(r'/status/(\d+)', url)
+    if match:
+        return match.group(1)
+    return url
+
+
 def _deduplicate_by_url(posts: list[dict]) -> list[dict]:
-    """同一URLを引用している投稿の重複排除"""
-    seen_urls = set()
+    """同一投稿の重複排除（URLのstatus IDで判定 + テキスト類似度）"""
+    seen_ids = set()
+    seen_texts = set()
     unique_posts = []
 
     for post in posts:
         url = post.get("url", "")
-        if not url:
+        text = post.get("text", "")
+
+        # URL正規化で重複チェック
+        if url:
+            normalized = _normalize_x_url(url)
+            if normalized in seen_ids:
+                continue
+            seen_ids.add(normalized)
+
+        # テキスト先頭100文字で重複チェック（同じ内容の別URL対策）
+        text_key = text[:100].strip()
+        if text_key and text_key in seen_texts:
             continue
-        if url in seen_urls:
-            continue
-        seen_urls.add(url)
+        if text_key:
+            seen_texts.add(text_key)
+
         unique_posts.append(post)
 
     return unique_posts
