@@ -615,29 +615,28 @@ async def submit_patrol_selections(request: Request):
 
 @app.post("/api/patrol/run")
 async def manual_patrol_run():
-    """X巡回を手動で即時実行するデバッグ用エンドポイント"""
+    """X巡回を手動で即時実行（バックグラウンド）"""
     import asyncio
     print("[XPatrol] 手動実行リクエスト受信")
-
     has_key = bool(Config.XAI_API_KEY)
-    print(f"[XPatrol] XAI_API_KEY設定済み: {has_key}")
-
-    # まず1キーワードだけでテスト（タイムアウト防止）
-    test_posts = await x_patrol.search_x("Claude Code tips", Config.XAI_API_KEY)
-
-    return {
-        "status": "test completed",
-        "has_api_key": has_key,
-        "test_query_results": len(test_posts),
-        "test_sample": test_posts[:2] if test_posts else [],
-    }
-
-
-@app.post("/api/patrol/run-full")
-async def full_patrol_run():
-    """X巡回フル実行（バックグラウンド）"""
-    import asyncio
-    print("[XPatrol] フル巡回リクエスト受信")
-    # バックグラウンドで実行（HTTPレスポンスはすぐ返す）
+    if not has_key:
+        return {"status": "error", "message": "XAI_API_KEY未設定"}
     asyncio.create_task(run_x_patrol())
-    return {"status": "patrol started in background"}
+    return {"status": "patrol started in background", "has_api_key": has_key}
+
+
+@app.get("/api/patrol/status")
+async def patrol_status():
+    """最新の巡回レポートの状態を確認"""
+    reports_dir = DATA_DIR / "reports"
+    if not reports_dir.exists():
+        return {"status": "no reports yet"}
+    patrol_files = sorted(reports_dir.glob("patrol-*.html"), reverse=True)
+    if not patrol_files:
+        return {"status": "no patrol reports found"}
+    latest = patrol_files[0]
+    return {
+        "status": "ok",
+        "latest_report": latest.name,
+        "url": f"{os.getenv('RAILWAY_PUBLIC_URL', '')}/reports/{latest.name}",
+    }
