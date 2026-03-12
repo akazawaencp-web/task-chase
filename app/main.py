@@ -230,10 +230,12 @@ async def handle_new_task(event: MessageEvent, text: str):
 
     # 4. LINE返信（reply_text = プッシュメッセージ消費なし）
     deadline_str = f"\n期限: {task['deadline']}" if task.get("deadline") else ""
-    line_handler.reply_text(
-        event,
-        f"了解、追加したよ\n\n[{task['id']}] {task['title']}{deadline_str}\n\n深掘りしたかったら「深掘りして」って送ってね",
-    )
+    skip_deepdive = "登録だけ" in text
+    if skip_deepdive:
+        reply_msg = f"了解、登録だけしたよ\n\n[{task['id']}] {task['title']}{deadline_str}"
+    else:
+        reply_msg = f"了解、追加したよ\n\n[{task['id']}] {task['title']}{deadline_str}\n\n深掘りしたかったら「深掘りして」って送ってね"
+    line_handler.reply_text(event, reply_msg)
 
 
 async def handle_complete(event: MessageEvent, task_id: int):
