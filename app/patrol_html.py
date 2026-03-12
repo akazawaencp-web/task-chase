@@ -22,23 +22,30 @@ def _build_candidate_html(post: dict, index: int) -> str:
     author = post.get("author", "不明")
     text = post.get("text", "")
     url = post.get("url", "")
+    usefulness = post.get("usefulness", "")
     link_domains = post.get("link_domains", [])
     lang = _detect_language(post)
 
-    # テキストは冒頭200文字に切り詰め
-    preview = text[:200] + ("..." if len(text) > 200 else "")
+    # テキストは冒頭300文字に切り詰め（日本語翻訳が入るので少し長めに）
+    preview = text[:300] + ("..." if len(text) > 300 else "")
     # HTML特殊文字をエスケープ
     preview = preview.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     author_escaped = author.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     url_escaped = url.replace('"', "&quot;")
+    usefulness_escaped = usefulness.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
     # 外部リンクドメインのタグ
     domain_tags = ""
-    for domain in link_domains[:3]:  # 最大3件まで表示
+    for domain in link_domains[:3]:
         domain_escaped = domain.replace("&", "&amp;")
         domain_tags += f'<span class="domain-tag">{domain_escaped}</span>'
 
     lang_class = "lang-jp" if lang == "JP" else "lang-en"
+
+    # 有用ポイント表示
+    useful_html = ""
+    if usefulness_escaped:
+        useful_html = f'<div class="usefulness">{usefulness_escaped}</div>'
 
     return f"""
   <div class="candidate-card" id="card-{index}">
@@ -56,9 +63,10 @@ def _build_candidate_html(post: dict, index: int) -> str:
           <span class="author">@{author_escaped}</span>
           <span class="lang-badge {lang_class}">{lang}</span>
         </div>
+        {useful_html}
         <div class="card-text">{preview}</div>
         {f'<div class="domain-list">{domain_tags}</div>' if domain_tags else ""}
-        <a class="post-link" href="{url_escaped}" target="_blank" rel="noopener">投稿を見る</a>
+        {f'<a class="post-link" href="{url_escaped}" target="_blank" rel="noopener">投稿を見る</a>' if url else ""}
       </div>
     </label>
   </div>"""
@@ -255,6 +263,16 @@ body {{
 .lang-jp {{
   background: var(--sky-light);
   color: var(--sky);
+}}
+.usefulness {{
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--coral);
+  background: var(--coral-light);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  line-height: 1.5;
 }}
 .card-text {{
   font-size: 13px;

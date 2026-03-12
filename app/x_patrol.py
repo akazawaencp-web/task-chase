@@ -131,6 +131,17 @@ def _parse_grok_response(result: dict) -> list[dict]:
         post_text = re.sub(r'\[\[\d+\]\]\(https?://[^\)]+\)', '', post_text)
         post_text = post_text.strip()
 
+        # 有用ポイントを抽出
+        usefulness = ""
+        useful_match = re.search(r'有用ポイント[:：]\s*(.+?)(?:\n|$)', entry)
+        if useful_match:
+            usefulness = useful_match.group(1).strip()
+            # 有用ポイント行をpost_textから除去
+            post_text = re.sub(r'有用ポイント[:：]\s*.+?(?:\n|$)', '', post_text).strip()
+
+        # リンク行をpost_textから除去
+        post_text = re.sub(r'リンク[:：]\s*.+?(?:\n|$)', '', post_text).strip()
+
         # このエントリに対応するX URLを取得
         url = x_urls[url_index] if url_index < len(x_urls) else ""
         # annotationsのURLがこのエントリ内に参照されているか確認
@@ -159,6 +170,7 @@ def _parse_grok_response(result: dict) -> list[dict]:
                 "author": author,
                 "text": post_text,
                 "url": url,
+                "usefulness": usefulness,
                 "link_domains": link_domains,
                 "has_links": len(link_domains) > 0,
                 "metrics": {},
@@ -184,15 +196,22 @@ async def search_x(query: str, api_key: str) -> list[dict]:
                     "input": (
                         f"Search X/Twitter for recent posts (last 24 hours) about: {query}\n\n"
                         "IMPORTANT INSTRUCTIONS:\n"
-                        "1. Prioritize posts with high engagement (many likes, retweets, impressions)\n"
-                        "2. Focus on posts that contain useful explanations, tutorials, tips, or tool introductions\n"
-                        "3. Skip short reaction posts like 'amazing!' or 'cool!' that don't add value\n"
-                        "4. For EACH post, provide:\n"
-                        "   - Author's @username\n"
-                        "   - The post content translated into Japanese (if originally in English or other non-Japanese language)\n"
-                        "   - Any external links mentioned\n"
-                        "5. Format: number each post as '1. **@username**: content'\n"
-                        "6. Do NOT include duplicate posts\n"
+                        "1. Return ONLY the top 3-5 most valuable posts (high engagement AND useful content)\n"
+                        "2. SKIP these types of posts:\n"
+                        "   - Short reactions ('amazing!', 'cool!', 'すごい！')\n"
+                        "   - Promotional spam or follower-bait posts\n"
+                        "   - Posts that just share a link without any explanation\n"
+                        "   - Duplicate or near-duplicate content\n"
+                        "3. PRIORITIZE posts that contain:\n"
+                        "   - Practical tutorials, tips, or workflows\n"
+                        "   - Tool introductions or comparisons\n"
+                        "   - Detailed explanations of features or configurations\n"
+                        "   - Links to in-depth articles (Zenn, note, Qiita, GitHub, blog posts)\n"
+                        "4. For EACH post, respond in this EXACT format:\n"
+                        "   1. **@username**: [完全な日本語訳（元が英語の場合は全文翻訳）]\n"
+                        "   有用ポイント: [この投稿がClaude Code/AI活用者にとって価値がある理由を1行で]\n"
+                        "   リンク: [外部リンクがあれば記載]\n"
+                        "5. ALL text must be in Japanese\n"
                     ),
                     "tools": [{"type": "x_search"}],
                 },
@@ -218,22 +237,18 @@ async def search_x(query: str, api_key: str) -> list[dict]:
 
 def _is_quality_post(post: dict) -> bool:
     """フィルタリングロジック: 候補に残すかどうか判定する"""
+    # URLがない投稿は除外
+    if not post.get("url", ""):
+        return False
+
     text = post.get("text", "")
-    link_domains = post.get("link_domains", [])
 
-    # 200文字以上 → 候補
-    if len(text) >= 200:
-        return True
+    # テキストが空の投稿は除外
+    if not text.strip():
+        return False
 
-    # 200文字未満でも品質ドメインへのリンクがある → 候補
-    for domain in link_domains:
-        for qd in QUALITY_DOMAINS:
-            if qd in domain:
-                return True
-
-    # 200文字未満でも外部リンクがある → 候補（記事付き投稿）
-    if post.get("has_links"):
-        return True
+    # Grokが厳選しているのでテキストがあればOK
+    return True
 
     return False
 
