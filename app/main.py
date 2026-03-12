@@ -154,8 +154,8 @@ async def handle_message(event: MessageEvent, text: str):
             line_handler.reply_text(event, "今日やるタスクはありません。")
         return
 
-    # 手動Deep Dive リクエスト
-    if "深掘り" in text or "deepdive" in text.lower():
+    # 手動Deep Dive リクエスト（「深掘り」「deepdive」単体の時だけ反応）
+    if text.strip() in ["深掘り", "deepdive", "ディープダイブ"]:
         request_file = Path(os.getenv("DATA_DIR", "/tmp/task-chase-data")) / "deepdive-request.json"
         request_data = {
             "requested_at": datetime.now().isoformat(),
