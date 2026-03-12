@@ -68,17 +68,85 @@ def add_to_checked(urls):
     _save_checked_urls(checked)
 
 
-def _extract_json_array(text: str) -> list[dict]:
-    """テキスト内からJSON配列部分を抽出してパースする"""
-    # [...] 形式のJSONを正規表現で抽出
-    match = re.search(r"\[[\s\S]*\]", text)
-    if not match:
+def _parse_grok_response(result: dict) -> list[dict]:
+    """Grok APIのレスポンスからX投稿情報を抽出する
+
+    Grokはテキスト形式で結果を返し、URLはannotationsに含まれる。
+    テキストからアカウント名・投稿内容を、annotationsからURLを抽出する。
+    """
+    posts = []
+    text = ""
+    annotations = []
+
+    # output配列からテキストとannotationsを取得
+    for item in result.get("output", []):
+        if not isinstance(item, dict):
+            continue
+        for content in item.get("content", []):
+            if isinstance(content, dict) and content.get("type") == "output_text":
+                text += content.get("text", "")
+                annotations.extend(content.get("annotations", []))
+
+    if not text:
         return []
-    try:
-        return json.loads(match.group(0))
-    except json.JSONDecodeError as e:
-        print(f"[XPatrol] JSONパースエラー: {e}")
-        return []
+
+    # annotationsからX投稿のURLを抽出
+    x_urls = []
+    for ann in annotations:
+        url = ann.get("url", "")
+        if "x.com/" in url or "twitter.com/" in url:
+            x_urls.append(url)
+
+    # テキストを投稿ごとに分割（番号パターンで区切り）
+    # "1. **@username**" や "1." のパターンで分割
+    entries = re.split(r'\n\d+\.\s+', text)
+
+    for i, entry in enumerate(entries):
+        if not entry.strip():
+            continue
+
+        # ユーザー名を抽出（**@username** パターン）
+        author_match = re.search(r'@(\w+)', entry)
+        author = author_match.group(1) if author_match else "unknown"
+
+        # 投稿テキストを抽出（ユーザー名・日時行以降の本文）
+        # 改行で分割して、本文部分を結合
+        lines = entry.strip().split('\n')
+        post_text_lines = []
+        for line in lines:
+            line = line.strip()
+            # メタ情報行をスキップ
+            if line.startswith('**@') or line.startswith('(') or not line:
+                continue
+            # URLアノテーションの参照を除去
+            line = re.sub(r'\[\[\d+\]\]\(https?://[^\)]+\)', '', line)
+            if line:
+                post_text_lines.append(line)
+        post_text = '\n'.join(post_text_lines)
+
+        # このエントリに対応するURLを取得
+        url = x_urls[i - 1] if 0 < i <= len(x_urls) else ""
+
+        # 外部リンクのドメインを抽出
+        link_domains = []
+        ext_urls = re.findall(r'https?://([^/\s\)]+)', entry)
+        for domain in ext_urls:
+            if 'x.com' not in domain and 'twitter.com' not in domain:
+                # サブドメインを含む形で記録
+                link_domains.append(domain)
+
+        if post_text or url:
+            posts.append({
+                "author": author,
+                "text": post_text,
+                "url": url,
+                "link_domains": link_domains,
+                "has_links": len(link_domains) > 0,
+                "metrics": {},
+            })
+
+    print(f"[XPatrol] パース結果: {len(posts)}件の投稿を抽出")
+    return posts
 
 
 async def search_x(query: str, api_key: str) -> list[dict]:
@@ -93,20 +161,16 @@ async def search_x(query: str, api_key: str) -> list[dict]:
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "grok-4-fast",
+                    "model": "grok-4-1-fast-reasoning",
                     "input": (
                         f"Search X/Twitter for recent posts (last 24 hours) about: {query}\n\n"
-                        "Return the results as a JSON array. Each item should have: "
-                        "author (username), text (full post text), url (post URL), "
-                        "metrics (likes, retweets, impressions if available), "
-                        "has_links (boolean, true if post contains external URLs), "
-                        "link_domains (list of external link domains like zenn.dev, note.com, etc). "
-                        "Only include posts from the last 24 hours. "
-                        "Return ONLY valid JSON, no other text."
+                        "List each post with the author's @username, the full post text, "
+                        "and any external links mentioned in the post. "
+                        "Include as many relevant posts as you can find from the last 24 hours."
                     ),
                     "tools": [{"type": "x_search"}],
                 },
-                timeout=60.0,
+                timeout=120.0,
             )
             result = response.json()
         except httpx.TimeoutException:
@@ -116,20 +180,12 @@ async def search_x(query: str, api_key: str) -> list[dict]:
             print(f"[XPatrol] API呼び出しエラー ({query}): {e}")
             return []
 
-    # レスポンスからテキスト部分を抽出
-    raw_text = ""
-    if isinstance(result, dict):
-        # output配列の中からテキストを探す
-        for item in result.get("output", []):
-            if isinstance(item, dict):
-                for content in item.get("content", []):
-                    if isinstance(content, dict) and content.get("type") == "output_text":
-                        raw_text += content.get("text", "")
-        # フォールバック: 直接textフィールド
-        if not raw_text:
-            raw_text = str(result)
+    # エラーチェック
+    if isinstance(result, dict) and result.get("error"):
+        print(f"[XPatrol] APIエラー ({query}): {result['error']}")
+        return []
 
-    posts = _extract_json_array(raw_text)
+    posts = _parse_grok_response(result)
     print(f"[XPatrol] '{query}' → {len(posts)}件取得")
     return posts
 
@@ -145,35 +201,32 @@ def _is_quality_post(post: dict) -> bool:
 
     # 200文字未満でも品質ドメインへのリンクがある → 候補
     for domain in link_domains:
-        if domain in QUALITY_DOMAINS:
-            return True
+        for qd in QUALITY_DOMAINS:
+            if qd in domain:
+                return True
+
+    # 200文字未満でも外部リンクがある → 候補（記事付き投稿）
+    if post.get("has_links"):
+        return True
 
     return False
 
 
 def _deduplicate_by_url(posts: list[dict]) -> list[dict]:
-    """同一URLを引用している投稿の重複排除（最高インプレッションのみ残す）"""
-    # URLをキーに、最高インプレッションの投稿を保持
-    url_best: dict[str, dict] = {}
+    """同一URLを引用している投稿の重複排除"""
+    seen_urls = set()
+    unique_posts = []
 
     for post in posts:
         url = post.get("url", "")
         if not url:
             continue
+        if url in seen_urls:
+            continue
+        seen_urls.add(url)
+        unique_posts.append(post)
 
-        # メトリクスからインプレッションを取得
-        metrics = post.get("metrics", {})
-        if isinstance(metrics, dict):
-            impressions = metrics.get("impressions", 0) or 0
-        else:
-            impressions = 0
-
-        if url not in url_best:
-            url_best[url] = {"post": post, "impressions": impressions}
-        elif impressions > url_best[url]["impressions"]:
-            url_best[url] = {"post": post, "impressions": impressions}
-
-    return [v["post"] for v in url_best.values()]
+    return unique_posts
 
 
 def _filter_candidates(posts: list[dict], checked_urls: list[str]) -> list[dict]:
@@ -206,7 +259,7 @@ async def run_patrol(api_key: str) -> list[dict]:
         posts = await search_x(query, api_key)
         all_posts.extend(posts)
         # APIレート制限を考慮して少し待つ
-        await asyncio.sleep(1)
+        await asyncio.sleep(2)
 
     # フィルタリング
     candidates = _filter_candidates(all_posts, checked_urls)
