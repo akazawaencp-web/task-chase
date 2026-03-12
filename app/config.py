@@ -24,3 +24,7 @@ class Config:
 
     # Server
     PORT = int(os.getenv("PORT", "8000"))
+
+    # X自動巡回（Grok API）
+    XAI_API_KEY = os.getenv("XAI_API_KEY", "")
+    PATROL_PIN = os.getenv("PATROL_PIN", "1234")  # デフォルト1234、あとでRIOが変更

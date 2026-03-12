@@ -18,7 +18,8 @@ from linebot.v3.webhooks import MessageEvent, TextMessageContent
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import Config
-from app import task_manager, line_handler, chase
+from app import task_manager, line_handler, chase, x_patrol
+from app.patrol_html import generate_patrol_html
 from app.task_parser import parse_task_input
 from app.research import research_task
 from app.html_generator import generate_report_html
@@ -510,6 +511,8 @@ async def startup():
     scheduler.add_job(scheduled_chase, "cron", hour=12, minute=0)
     scheduler.add_job(scheduled_chase, "cron", hour=18, minute=0)
     scheduler.add_job(scheduled_monthly_report, "cron", day=1, hour=9, minute=0)
+    # X自動巡回: 毎日深夜3:00に実行
+    scheduler.add_job(run_x_patrol, "cron", hour=3, minute=0, id="x_patrol")
     scheduler.start()
 
     # 起動通知は削除（プッシュメッセージ消費を削減するため）
@@ -544,3 +547,75 @@ async def root():
 async def list_tasks():
     """タスク一覧API（デバッグ用）"""
     return task_manager.get_all_tasks()
+
+
+# === X自動巡回 ===
+
+async def run_x_patrol():
+    """X自動巡回を実行し、候補があればHTMLを生成してLINE通知する（cronから呼ばれる）"""
+    print("[XPatrol] 巡回開始")
+    user_id = load_user_id()
+
+    candidates = await x_patrol.run_patrol(Config.XAI_API_KEY)
+
+    if not candidates:
+        print("[XPatrol] 候補なし。通知なし")
+        return
+
+    # HTMLレポートを生成
+    date_str = datetime.now().strftime("%Y%m%d")
+    filepath = generate_patrol_html(candidates, date_str)
+    filename = Path(filepath).name
+
+    # /reports/ 経由でアクセス可能なURLを生成
+    base_url = os.getenv("RAILWAY_PUBLIC_URL", "")
+    report_url = f"{base_url}/reports/{filename}"
+
+    print(f"[XPatrol] レポート生成: {report_url}")
+
+    # LINE通知
+    if user_id:
+        msg = f"X巡回完了！{len(candidates)}件の候補があるよ\n\n{report_url}"
+        try:
+            line_handler.push_text(user_id, msg)
+        except Exception as e:
+            print(f"[XPatrol] LINE通知エラー: {e}")
+
+
+@app.post("/api/patrol/submit")
+async def submit_patrol_selections(request: Request):
+    """巡回HTMLからチェックされた候補を受け取り、タスク登録する"""
+    data = await request.json()
+    pin = data.get("pin", "")
+    selected = data.get("selected", [])  # {url, text, title} のリスト
+
+    # PIN検証（環境変数 PATROL_PIN と照合）
+    if pin != Config.PATROL_PIN:
+        return {"error": "PINが正しくありません"}
+
+    if not selected:
+        return {"error": "候補が選択されていません"}
+
+    # 各候補をタスク登録
+    registered = []
+    for item in selected:
+        task = task_manager.add_task(
+            title=item.get("title", "X投稿深掘り"),
+            description=item.get("text", "")[:200],
+            raw_input=item.get("url", ""),
+        )
+        registered.append(task["id"])
+
+    # 既読リストに追加（次回巡回で除外）
+    x_patrol.add_to_checked(item["url"] for item in selected)
+
+    print(f"[XPatrol] {len(registered)}件のタスクを登録: {registered}")
+    return {"message": f"{len(registered)}件のタスクを登録しました", "task_ids": registered}
+
+
+@app.post("/api/patrol/run")
+async def manual_patrol_run():
+    """X巡回を手動で即時実行するデバッグ用エンドポイント"""
+    print("[XPatrol] 手動実行リクエスト受信")
+    await run_x_patrol()
+    return {"status": "patrol completed"}
