@@ -93,7 +93,7 @@ async def search_x(query: str, api_key: str) -> list[dict]:
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "grok-3-mini",
+                    "model": "grok-4-fast",
                     "input": (
                         f"Search X/Twitter for recent posts (last 24 hours) about: {query}\n\n"
                         "Return the results as a JSON array. Each item should have: "
