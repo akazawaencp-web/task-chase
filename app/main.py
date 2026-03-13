@@ -554,32 +554,37 @@ async def list_tasks():
 async def run_x_patrol():
     """X自動巡回を実行し、候補があればHTMLを生成してLINE通知する（cronから呼ばれる）"""
     print("[XPatrol] 巡回開始")
-    user_id = load_user_id()
+    try:
+        user_id = load_user_id()
 
-    candidates = await x_patrol.run_patrol(Config.XAI_API_KEY)
+        candidates = await x_patrol.run_patrol(Config.XAI_API_KEY)
 
-    if not candidates:
-        print("[XPatrol] 候補なし。通知なし")
-        return
+        if not candidates:
+            print("[XPatrol] 候補なし。通知なし")
+            return
 
-    # HTMLレポートを生成
-    date_str = datetime.now().strftime("%Y%m%d")
-    filepath = generate_patrol_html(candidates, date_str)
-    filename = Path(filepath).name
+        # HTMLレポートを生成
+        date_str = datetime.now().strftime("%Y%m%d")
+        filepath = generate_patrol_html(candidates, date_str)
+        filename = Path(filepath).name
 
-    # /reports/ 経由でアクセス可能なURLを生成
-    base_url = os.getenv("RAILWAY_PUBLIC_URL", "https://web-production-5d00d.up.railway.app")
-    report_url = f"{base_url}/reports/{filename}"
+        # /reports/ 経由でアクセス可能なURLを生成
+        base_url = os.getenv("RAILWAY_PUBLIC_URL", "https://web-production-5d00d.up.railway.app")
+        report_url = f"{base_url}/reports/{filename}"
 
-    print(f"[XPatrol] レポート生成: {report_url}")
+        print(f"[XPatrol] レポート生成: {report_url}")
 
-    # LINE通知
-    if user_id:
-        msg = f"X巡回完了！{len(candidates)}件の候補があるよ\n\n{report_url}"
-        try:
-            line_handler.push_text(user_id, msg)
-        except Exception as e:
-            print(f"[XPatrol] LINE通知エラー: {e}")
+        # LINE通知
+        if user_id:
+            msg = f"X巡回完了！{len(candidates)}件の候補があるよ\n\n{report_url}"
+            try:
+                line_handler.push_text(user_id, msg)
+            except Exception as e:
+                print(f"[XPatrol] LINE通知エラー: {e}")
+    except Exception as e:
+        import traceback
+        print(f"[XPatrol] 巡回エラー: {e}")
+        traceback.print_exc()
 
 
 @app.post("/api/patrol/submit")
