@@ -22,8 +22,8 @@ QUALITY_DOMAINS = {
     "dev.to",
 }
 
-# 検索キーワード（英語8個 + 日本語3個）
-SEARCH_QUERIES = [
+# 検索キーワード（英語: バズ投稿限定 / 日本語: 幅広く）
+EN_QUERIES = [
     "Claude Code tips",
     "Claude Code workflow",
     "Claude Code MCP",
@@ -32,6 +32,9 @@ SEARCH_QUERIES = [
     "AI agent build",
     "prompt engineering techniques",
     "Anthropic API",
+]
+
+JA_QUERIES = [
     "Claude Code 設定",
     "Claude Code スキル",
     "AIエージェント 構築",
@@ -180,9 +183,66 @@ def _parse_grok_response(result: dict) -> list[dict]:
     return posts
 
 
-async def search_x(query: str, api_key: str) -> list[dict]:
+def _build_prompt(query: str, is_english: bool) -> str:
+    """検索プロンプトを生成する（英語: バズ限定 / 日本語: 幅広く）"""
+    user_context = (
+        "The user is a solo entrepreneur running a recruitment agency in Japan, "
+        "heavily using Claude Code for business automation. "
+        "Posts are valuable if they contain: practical tool configs, "
+        "comparisons, templates/frameworks, security tips, or links to "
+        "in-depth articles (Zenn, note, Qiita, GitHub, Medium, dev.to)."
+    )
+
+    if is_english:
+        return (
+            f"Search X/Twitter for recent posts (last 24 hours) about: {query}\n\n"
+            f"CONTEXT: {user_context}\n\n"
+            "IMPORTANT INSTRUCTIONS:\n"
+            "1. Return ONLY the top 3 VIRAL/HIGH-ENGAGEMENT posts\n"
+            "   - Must have at least 100+ likes or significant reposts\n"
+            "   - Ignore low-engagement posts even if content seems good\n"
+            "2. SKIP these types:\n"
+            "   - Short reactions, hype posts ('amazing!', 'this is huge!')\n"
+            "   - Promotional spam, follower-bait, course/product sales\n"
+            "   - Posts that just share a link without explanation\n"
+            "3. PRIORITIZE:\n"
+            "   - Practical tutorials, workflows, configs with real examples\n"
+            "   - Tool comparisons with concrete benchmarks/numbers\n"
+            "   - Framework/template introductions\n"
+            "   - Security/architecture best practices\n"
+            "   - Links to detailed articles or GitHub repos\n"
+            "4. For EACH post, respond in this EXACT format:\n"
+            "   1. **@username**: [完全な日本語訳（全文を自然な日本語に翻訳）]\n"
+            "   有用ポイント: [人材紹介×AI活用の個人事業主にとって価値がある理由を1行で]\n"
+            "   リンク: [外部リンクがあれば記載]\n"
+            "5. ALL text must be in Japanese\n"
+        )
+    else:
+        return (
+            f"X/Twitterで直近24時間の投稿を検索: {query}\n\n"
+            f"CONTEXT: {user_context}\n\n"
+            "指示:\n"
+            "1. 有用な投稿を3-5件返してください（エンゲージメントの高さは必須条件ではない）\n"
+            "2. スキップすべき投稿:\n"
+            "   - 短い感想・反応だけ（『すごい！』『神！』）\n"
+            "   - 宣伝・セルフプロモーション\n"
+            "   - リンクだけで説明なし\n"
+            "3. 優先すべき投稿:\n"
+            "   - 実用的な設定方法・ワークフロー・Tips\n"
+            "   - ツール比較・レビュー\n"
+            "   - 詳細記事へのリンク付き（Zenn, note, Qiita, GitHub等）\n"
+            "   - セキュリティ・設計のベストプラクティス\n"
+            "4. 各投稿を以下の形式で回答:\n"
+            "   1. **@username**: [投稿の全文]\n"
+            "   有用ポイント: [人材紹介×AI活用の個人事業主にとって価値がある理由を1行で]\n"
+            "   リンク: [外部リンクがあれば記載]\n"
+        )
+
+
+async def search_x(query: str, api_key: str, is_english: bool = True) -> list[dict]:
     """Grok APIでXを検索し、投稿リストを返す"""
-    print(f"[XPatrol] 検索中: {query}")
+    lang_label = "EN" if is_english else "JA"
+    print(f"[XPatrol] [{lang_label}] 検索中: {query}")
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(
@@ -193,26 +253,7 @@ async def search_x(query: str, api_key: str) -> list[dict]:
                 },
                 json={
                     "model": "grok-4-1-fast-reasoning",
-                    "input": (
-                        f"Search X/Twitter for recent posts (last 24 hours) about: {query}\n\n"
-                        "IMPORTANT INSTRUCTIONS:\n"
-                        "1. Return ONLY the top 3-5 most valuable posts (high engagement AND useful content)\n"
-                        "2. SKIP these types of posts:\n"
-                        "   - Short reactions ('amazing!', 'cool!', 'すごい！')\n"
-                        "   - Promotional spam or follower-bait posts\n"
-                        "   - Posts that just share a link without any explanation\n"
-                        "   - Duplicate or near-duplicate content\n"
-                        "3. PRIORITIZE posts that contain:\n"
-                        "   - Practical tutorials, tips, or workflows\n"
-                        "   - Tool introductions or comparisons\n"
-                        "   - Detailed explanations of features or configurations\n"
-                        "   - Links to in-depth articles (Zenn, note, Qiita, GitHub, blog posts)\n"
-                        "4. For EACH post, respond in this EXACT format:\n"
-                        "   1. **@username**: [完全な日本語訳（元が英語の場合は全文翻訳）]\n"
-                        "   有用ポイント: [この投稿がClaude Code/AI活用者にとって価値がある理由を1行で]\n"
-                        "   リンク: [外部リンクがあれば記載]\n"
-                        "5. ALL text must be in Japanese\n"
-                    ),
+                    "input": _build_prompt(query, is_english),
                     "tools": [{"type": "x_search"}],
                 },
                 timeout=120.0,
@@ -249,8 +290,6 @@ def _is_quality_post(post: dict) -> bool:
 
     # Grokが厳選しているのでテキストがあればOK
     return True
-
-    return False
 
 
 def _normalize_x_url(url: str) -> str:
@@ -316,11 +355,16 @@ async def run_patrol(api_key: str) -> list[dict]:
     checked_urls = _load_checked_urls()
     all_posts = []
 
-    # 各キーワードを順番に検索
-    for query in SEARCH_QUERIES:
-        posts = await search_x(query, api_key)
+    # 英語キーワード（バズ投稿限定）
+    for query in EN_QUERIES:
+        posts = await search_x(query, api_key, is_english=True)
         all_posts.extend(posts)
-        # APIレート制限を考慮して少し待つ
+        await asyncio.sleep(2)
+
+    # 日本語キーワード（幅広く）
+    for query in JA_QUERIES:
+        posts = await search_x(query, api_key, is_english=False)
+        all_posts.extend(posts)
         await asyncio.sleep(2)
 
     # フィルタリング
