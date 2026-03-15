@@ -62,19 +62,28 @@ def load_user_id() -> str:
 @app.post("/webhook")
 async def webhook(request: Request):
     """LINE Webhookエンドポイント"""
+    print("[Webhook] リクエスト受信")
     signature = request.headers.get("X-Line-Signature", "")
     body = (await request.body()).decode("utf-8")
 
     try:
         events = parser.parse(body, signature)
     except InvalidSignatureError:
+        print("[Webhook] 署名エラー")
         raise HTTPException(status_code=400, detail="Invalid signature")
 
+    print(f"[Webhook] イベント数: {len(events)}")
     for event in events:
         if isinstance(event, MessageEvent) and isinstance(event.message, TextMessageContent):
             user_id = event.source.user_id
             save_user_id(user_id)
-            await handle_message(event, event.message.text)
+            try:
+                await handle_message(event, event.message.text)
+                print(f"[Webhook] メッセージ処理完了: {event.message.text[:30]}")
+            except Exception as e:
+                import traceback
+                print(f"[Webhook] メッセージ処理エラー: {type(e).__name__}: {e}")
+                traceback.print_exc()
 
     return {"status": "ok"}
 
@@ -186,12 +195,14 @@ async def handle_message(event: MessageEvent, text: str):
 
 async def handle_new_task(event: MessageEvent, text: str):
     """新しいタスクを登録→タイトル生成→reply通知（簡易調査・HTML生成は省略、deepdiveで対応）"""
+    print(f"[NewTask] 開始: {text[:30]}")
 
     # 1. テキストからタスク情報を抽出（タイトル・ジャンル・タイプ分類）
     try:
         parsed = await asyncio.wait_for(parse_task_input(text), timeout=15)
+        print(f"[NewTask] パース成功: {parsed.get('title', '?')}")
     except Exception as e:
-        print(f"[TaskParse] フォールバック使用（{type(e).__name__}: {e}）")
+        print(f"[NewTask] パースフォールバック（{type(e).__name__}: {e}）")
         parsed = {
             "title": text[:20].strip(),
             "description": text,
@@ -246,7 +257,12 @@ async def handle_new_task(event: MessageEvent, text: str):
         reply_msg = f"了解、登録だけしたよ！\n\n[{task['id']}] {task['title']}{deadline_str}"
     else:
         reply_msg = f"了解、追加したよ！\n\n[{task['id']}] {task['title']}{deadline_str}\n\n深掘りしたかったら「深掘りして」って送ってね！"
-    line_handler.reply_text(event, reply_msg)
+    print(f"[NewTask] LINE返信開始")
+    try:
+        line_handler.reply_text(event, reply_msg)
+        print(f"[NewTask] LINE返信成功")
+    except Exception as e:
+        print(f"[NewTask] LINE返信エラー: {type(e).__name__}: {e}")
 
 
 async def handle_complete(event: MessageEvent, task_id: int):
