@@ -188,7 +188,17 @@ async def handle_new_task(event: MessageEvent, text: str):
     """新しいタスクを登録→タイトル生成→reply通知（簡易調査・HTML生成は省略、deepdiveで対応）"""
 
     # 1. テキストからタスク情報を抽出（タイトル・ジャンル・タイプ分類）
-    parsed = await parse_task_input(text)
+    try:
+        parsed = await asyncio.wait_for(parse_task_input(text), timeout=15)
+    except Exception as e:
+        print(f"[TaskParse] フォールバック使用（{type(e).__name__}: {e}）")
+        parsed = {
+            "title": text[:20].strip(),
+            "description": text,
+            "deadline": "",
+            "task_type": "action",
+            "genre": "life",
+        }
 
     # 2. タスクDB登録
     task = task_manager.add_task(
