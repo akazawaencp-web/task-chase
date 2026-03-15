@@ -194,24 +194,69 @@ async def handle_message(event: MessageEvent, text: str):
 
 
 async def handle_new_task(event: MessageEvent, text: str):
-    """新しいタスクを登録→reply通知→バックグラウンドでパース・カレンダー登録"""
+    """新しいタスクを登録→タイトル生成→reply通知"""
     print(f"[NewTask] 開始: {text[:30]}")
 
-    # 1. まずタスクDB登録（原文をそのままタイトルにして即座に登録）
+    # 1. テキストからタスク情報を抽出（タイトル・ジャンル・タイプ分類）
+    try:
+        parsed = await asyncio.wait_for(parse_task_input(text), timeout=15)
+        print(f"[NewTask] パース成功: {parsed.get('title', '?')}")
+    except Exception as e:
+        print(f"[NewTask] パースフォールバック（{type(e).__name__}: {e}）")
+        parsed = {
+            "title": text[:20].strip(),
+            "description": text,
+            "deadline": "",
+            "task_type": "action",
+            "genre": "life",
+        }
+
+    # 2. タスクDB登録
     task = task_manager.add_task(
-        title=text[:20].strip(),
-        description=text,
-        deadline="",
+        title=parsed["title"],
+        description=parsed.get("description", ""),
+        deadline=parsed.get("deadline", ""),
         raw_input=text,
     )
-    print(f"[NewTask] DB登録完了: ID={task['id']}")
+    task["task_type"] = parsed.get("task_type", "action")
+    task["genre"] = parsed.get("genre", "life")
+    update_fields = {
+        "task_type": task["task_type"],
+        "genre": task["genre"],
+    }
 
-    # 2. LINE返信を最優先（reply_tokenは有効期限が短い）
+    # 「登録だけ」が含まれていたらDeepDive対象外にする
+    if "登録だけ" in text:
+        update_fields["deepdive_status"] = "skipped"
+
+    task_manager.update_task(task["id"], update_fields)
+
+    # 3. Google Tasksに登録（タイムアウト付き）
+    try:
+        event_id = await asyncio.wait_for(
+            asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: add_task_to_calendar(
+                    title=task["title"],
+                    deadline=task.get("deadline", ""),
+                    description=task.get("description", ""),
+                ),
+            ),
+            timeout=20,
+        )
+        task_manager.update_task(task["id"], {"calendar_event_id": event_id})
+    except asyncio.TimeoutError:
+        print(f"[Tasks] タイムアウト: {task['title']}")
+    except Exception as e:
+        print(f"[Tasks] 登録エラー: {e}")
+
+    # 4. LINE返信
+    deadline_str = f"\n期限: {task['deadline']}" if task.get("deadline") else ""
     skip_deepdive = "登録だけ" in text
     if skip_deepdive:
-        reply_msg = f"了解、登録だけしたよ！\n\n[{task['id']}] {task['title']}"
+        reply_msg = f"了解、登録だけしたよ！\n\n[{task['id']}] {task['title']}{deadline_str}"
     else:
-        reply_msg = f"了解、追加したよ！\n\n[{task['id']}] {task['title']}\n\n深掘りしたかったら「深掘りして」って送ってね！"
+        reply_msg = f"了解、追加したよ！\n\n[{task['id']}] {task['title']}{deadline_str}\n\n深掘りしたかったら「深掘りして」って送ってね！"
     print(f"[NewTask] LINE返信開始")
     try:
         await asyncio.wait_for(
@@ -223,53 +268,6 @@ async def handle_new_task(event: MessageEvent, text: str):
         print(f"[NewTask] LINE返信成功")
     except Exception as e:
         print(f"[NewTask] LINE返信エラー: {type(e).__name__}: {e}")
-
-    # 3. バックグラウンドでタイトル解析・カレンダー登録（失敗しても問題ない）
-    asyncio.create_task(_background_enrich(task, text, skip_deepdive))
-
-
-async def _background_enrich(task: dict, text: str, skip_deepdive: bool):
-    """タスクのタイトル解析・カレンダー登録をバックグラウンドで実行"""
-    try:
-        # タイトル解析
-        try:
-            parsed = await asyncio.wait_for(parse_task_input(text), timeout=15)
-            update_fields = {
-                "title": parsed["title"],
-                "description": parsed.get("description", text),
-                "deadline": parsed.get("deadline", ""),
-                "task_type": parsed.get("task_type", "action"),
-                "genre": parsed.get("genre", "life"),
-            }
-            print(f"[Enrich] パース成功: {parsed.get('title', '?')}")
-        except Exception as e:
-            print(f"[Enrich] パースフォールバック（{type(e).__name__}: {e}）")
-            update_fields = {"task_type": "action", "genre": "life"}
-
-        if skip_deepdive:
-            update_fields["deepdive_status"] = "skipped"
-
-        task_manager.update_task(task["id"], update_fields)
-
-        # Google Tasks登録
-        try:
-            event_id = await asyncio.wait_for(
-                asyncio.get_event_loop().run_in_executor(
-                    None,
-                    lambda: add_task_to_calendar(
-                        title=update_fields.get("title", task["title"]),
-                        deadline=update_fields.get("deadline", ""),
-                        description=update_fields.get("description", ""),
-                    ),
-                ),
-                timeout=20,
-            )
-            task_manager.update_task(task["id"], {"calendar_event_id": event_id})
-            print(f"[Enrich] カレンダー登録成功")
-        except Exception as e:
-            print(f"[Enrich] カレンダー登録失敗: {type(e).__name__}: {e}")
-    except Exception as e:
-        print(f"[Enrich] 予期しないエラー: {type(e).__name__}: {e}")
 
 
 async def handle_complete(event: MessageEvent, task_id: int):
