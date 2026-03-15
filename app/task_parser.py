@@ -6,14 +6,14 @@ from app.cost_tracker import record_cost
 
 
 async def parse_task_input(user_text: str) -> dict:
-    """ユーザーの自然言語入力をタスク情報に分解する"""
+    """ユーザーの自然言語入力をタスク情報に分解する（非同期版）"""
     from datetime import datetime
 
     today = datetime.now().strftime("%Y-%m-%d")
 
-    client = anthropic.Anthropic(api_key=Config.ANTHROPIC_API_KEY)
+    client = anthropic.AsyncAnthropic(api_key=Config.ANTHROPIC_API_KEY)
 
-    message = client.messages.create(
+    message = await client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=500,
         messages=[
