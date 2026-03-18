@@ -49,6 +49,7 @@ def add_task(title: str, description: str = "", deadline: str = "", raw_input: s
         "chase_count": 0,
         "postpone_count": 0,
         "last_chased_at": "",
+        "hidden": False,
     }
     tasks.append(task)
     _save_tasks(tasks)

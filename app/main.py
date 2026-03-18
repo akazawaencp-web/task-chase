@@ -475,6 +475,19 @@ async def update_dashboard_task(request: Request, _=Depends(verify_api_key)):
     return task
 
 
+@app.post("/api/dashboard/toggle-hidden")
+async def toggle_hidden(request: Request, _=Depends(verify_api_key)):
+    """ダッシュボード用: タスクの非表示フラグを切り替え"""
+    data = await request.json()
+    task_id = data["task_id"]
+    current = task_manager.get_task(task_id)
+    if not current:
+        raise HTTPException(status_code=404, detail="Task not found")
+    new_hidden = not current.get("hidden", False)
+    task = task_manager.update_task(task_id, {"hidden": new_hidden})
+    return task
+
+
 @app.post("/api/dashboard/reclassify")
 async def reclassify_all_tasks(_=Depends(verify_api_key)):
     """全タスクのジャンル・タイプを原文から再分類"""

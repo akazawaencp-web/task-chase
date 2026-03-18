@@ -3,6 +3,7 @@
 import anthropic
 from app.config import Config
 from app.cost_tracker import record_cost
+from app.url_fetcher import extract_urls, fetch_url_metadata
 
 
 async def parse_task_input(user_text: str) -> dict:
@@ -10,6 +11,27 @@ async def parse_task_input(user_text: str) -> dict:
     from datetime import datetime
 
     today = datetime.now().strftime("%Y-%m-%d")
+
+    # URLが含まれている場合、内容を事前取得
+    url_context = ""
+    urls = extract_urls(user_text)
+    if urls:
+        for url in urls[:3]:  # 最大3URLまで
+            try:
+                meta = await fetch_url_metadata(url)
+                if meta["title"]:
+                    url_context += f"\n- URL: {url}\n  ページタイトル: {meta['title']}"
+                    if meta["description"]:
+                        url_context += f"\n  概要: {meta['description'][:200]}"
+            except Exception as e:
+                print(f"[TaskParser] URL取得スキップ: {e}")
+
+    url_instruction = ""
+    if url_context:
+        url_instruction = f"""
+- 【重要】テキストにURLが含まれる場合、URLそのものではなく以下のURL内容情報を元に具体的なタイトルをつけること
+  例: ×「URLの内容確認」 ○「Claude Code活用術の記事」
+  URL内容情報:{url_context}"""
 
     client = anthropic.AsyncAnthropic(api_key=Config.ANTHROPIC_API_KEY)
 
@@ -41,7 +63,7 @@ async def parse_task_input(user_text: str) -> dict:
 - 今日の日付は{today}。年が省略されている場合は今日以降の直近の日付にする
 - 期限がない場合はdeadlineを空文字にする
 - task_type: 調べもの・読むだけ→review、行動が必要→action、やるかやらないか判断が必要→decision
-- genre: 集客・営業・スカウト・送客・媒体→sales、AI・ツール・CRM・自動化・システム→ai、事務・手続き・免許・法人・経理→admin、業界知識・レポート・面接対策・競合→industry、記事・動画・トレンド・学習インプット→input"""
+- genre: 集客・営業・スカウト・送客・媒体→sales、AI・ツール・CRM・自動化・システム→ai、事務・手続き・免許・法人・経理→admin、業界知識・レポート・面接対策・競合→industry、記事・動画・トレンド・学習インプット→input{url_instruction}"""
             }
         ],
     )
