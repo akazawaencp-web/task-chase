@@ -475,6 +475,18 @@ async def update_dashboard_task(request: Request, _=Depends(verify_api_key)):
     return task
 
 
+@app.post("/api/dashboard/update-memo")
+async def update_memo(request: Request, _=Depends(verify_api_key)):
+    """ダッシュボード用: タスクのメモを更新"""
+    data = await request.json()
+    task_id = data["task_id"]
+    memo = data.get("memo", "")
+    task = task_manager.update_task(task_id, {"memo": memo})
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return task
+
+
 @app.post("/api/dashboard/toggle-hidden")
 async def toggle_hidden(request: Request, _=Depends(verify_api_key)):
     """ダッシュボード用: タスクの非表示フラグを切り替え"""
