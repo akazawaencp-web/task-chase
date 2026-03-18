@@ -542,8 +542,8 @@ async def startup():
     scheduler.add_job(scheduled_chase, "cron", hour=12, minute=0)
     scheduler.add_job(scheduled_chase, "cron", hour=18, minute=0)
     scheduler.add_job(scheduled_monthly_report, "cron", day=1, hour=9, minute=0)
-    # X自動巡回: 毎日深夜3:00に実行
-    scheduler.add_job(run_x_patrol, "cron", hour=3, minute=0, id="x_patrol")
+    # X自動巡回: 一時停止中（2026-03-18）
+    # scheduler.add_job(run_x_patrol, "cron", hour=3, minute=0, id="x_patrol")
     scheduler.start()
 
     # 起動通知は削除（プッシュメッセージ消費を削減するため）
