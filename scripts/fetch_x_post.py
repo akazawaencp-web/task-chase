@@ -17,6 +17,8 @@ import json
 import re
 import subprocess
 import sys
+import urllib.request
+import urllib.error
 
 
 def parse_x_url(url):
@@ -251,8 +253,81 @@ def to_human_readable(data):
         lines.append(f"埋め込みURL:")
         for u in data["embedded_urls"]:
             lines.append(f"  {u}")
+        lines.append("")
+
+    # 展開済みリンク先の内容
+    if data.get("expanded_links"):
+        lines.append(f"━━━ リンク先の内容 ({len(data['expanded_links'])}件) ━━━")
+        for link in data["expanded_links"]:
+            lines.append(f"")
+            lines.append(f"▶ {link['url']}")
+            if link.get("content"):
+                lines.append(link["content"])
+            else:
+                lines.append("  (内容を取得できませんでした)")
+            lines.append("")
 
     return "\n".join(lines)
+
+
+SKIP_DOMAINS = {
+    "pbs.twimg.com", "video.twimg.com", "abs.twimg.com",
+    "twitter.com", "x.com", "t.co",
+}
+
+
+def resolve_tco(tco_url):
+    """t.coリンクを展開してリダイレクト先URLを返す"""
+    try:
+        result = subprocess.run(
+            ["curl", "-sI", "-o", "/dev/null", "-w", "%{redirect_url}", tco_url],
+            capture_output=True, text=True, timeout=10,
+        )
+        url = result.stdout.strip()
+        return url if url else None
+    except Exception:
+        return None
+
+
+def fetch_url_content(url):
+    """URLの内容をテキストで取得（HTMLからプレーンテキストを抽出）"""
+    try:
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+        })
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            html = resp.read().decode("utf-8", errors="replace")
+        # 簡易的にHTMLタグを除去してテキスト化
+        text = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL)
+        text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL)
+        text = re.sub(r'<[^>]+>', ' ', text)
+        text = re.sub(r'\s+', ' ', text).strip()
+        # 長すぎる場合は最初の5000文字に制限
+        if len(text) > 5000:
+            text = text[:5000] + "...(truncated)"
+        return text
+    except Exception:
+        return None
+
+
+def expand_embedded_urls(embedded_urls):
+    """t.coリンクを展開し、外部記事の場合は内容も取得して返す"""
+    results = []
+    for tco in embedded_urls:
+        resolved = resolve_tco(tco)
+        if not resolved:
+            continue
+        # ドメインチェック：画像/動画/X自体はスキップ
+        from urllib.parse import urlparse
+        domain = urlparse(resolved).hostname or ""
+        if any(domain.endswith(skip) for skip in SKIP_DOMAINS):
+            continue
+        entry = {"tco": tco, "url": resolved, "content": None}
+        content = fetch_url_content(resolved)
+        if content:
+            entry["content"] = content
+        results.append(entry)
+    return results
 
 
 def main():
@@ -284,6 +359,13 @@ def main():
         else:
             print("エラー: 投稿を取得できませんでした。URLが正しいか確認してください。", file=sys.stderr)
             sys.exit(1)
+
+    # t.coリンクを展開して外部記事の内容を取得（--no-expandで無効化可能）
+    no_expand = "--no-expand" in sys.argv
+    if not no_expand and data.get("embedded_urls"):
+        expanded = expand_embedded_urls(data["embedded_urls"])
+        if expanded:
+            data["expanded_links"] = expanded
 
     if output_json:
         print(json.dumps(data, ensure_ascii=False, indent=2))
