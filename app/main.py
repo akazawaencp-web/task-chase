@@ -136,6 +136,18 @@ async def sentry_webhook(request: Request):
         else:
             print(f"[Sentry Webhook] user_id未設定、通知スキップ: {title[:50]}")
 
+        # Task Chase Systemにタスクとして自動登録
+        try:
+            from app.task_manager import add_task
+            task_title = f"[Sentry] {title[:80]}"
+            task_desc = f"プロジェクト: {project}\nレベル: {level}\n発生回数: {count}"
+            if url:
+                task_desc += f"\n詳細: {url}"
+            add_task(task_title, description=task_desc)
+            print(f"[Sentry Webhook] タスク登録: {task_title}")
+        except Exception as te:
+            print(f"[Sentry Webhook] タスク登録エラー: {te}")
+
         return {"status": "ok"}
     except Exception as e:
         print(f"[Sentry Webhook] エラー: {e}")
