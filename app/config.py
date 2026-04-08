@@ -25,6 +25,10 @@ class Config:
     # Server
     PORT = int(os.getenv("PORT", "8000"))
 
+    # 翻訳Bot（別のLINE公式アカウント）
+    TRANSLATE_LINE_CHANNEL_SECRET = os.getenv("TRANSLATE_LINE_CHANNEL_SECRET", "")
+    TRANSLATE_LINE_CHANNEL_ACCESS_TOKEN = os.getenv("TRANSLATE_LINE_CHANNEL_ACCESS_TOKEN", "")
+
     # X自動巡回（Grok API）
     XAI_API_KEY = os.getenv("XAI_API_KEY", "")
     PATROL_PIN = os.getenv("PATROL_PIN", "1234")  # デフォルト1234、あとでRIOが変更

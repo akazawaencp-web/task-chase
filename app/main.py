@@ -19,6 +19,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.config import Config
 from app import task_manager, line_handler, chase, x_patrol
+from app.translator import translate
 from app.patrol_html import generate_patrol_html
 from app.task_parser import parse_task_input
 from app.research import research_task
@@ -684,6 +685,65 @@ async def debug_network():
 async def list_tasks():
     """タスク一覧API（デバッグ用）"""
     return task_manager.get_all_tasks()
+
+
+# === 翻訳Bot ===
+
+translate_parser = None
+if Config.TRANSLATE_LINE_CHANNEL_SECRET:
+    translate_parser = WebhookParser(Config.TRANSLATE_LINE_CHANNEL_SECRET)
+
+
+@app.post("/webhook/translate")
+async def translate_webhook(request: Request):
+    """翻訳Bot用 LINE Webhookエンドポイント"""
+    if not translate_parser:
+        raise HTTPException(status_code=500, detail="Translation bot not configured")
+
+    signature = request.headers.get("X-Line-Signature", "")
+    body = (await request.body()).decode("utf-8")
+
+    try:
+        events = translate_parser.parse(body, signature)
+    except InvalidSignatureError:
+        raise HTTPException(status_code=400, detail="Invalid signature")
+
+    for event in events:
+        if isinstance(event, MessageEvent) and isinstance(event.message, TextMessageContent):
+            try:
+                await handle_translate_message(event)
+            except Exception as e:
+                print(f"[Translate] エラー: {type(e).__name__}: {e}")
+
+    return {"status": "ok"}
+
+
+async def handle_translate_message(event: MessageEvent):
+    """グループ内メッセージを翻訳して返信"""
+    text = event.message.text.strip()
+    if not text:
+        return
+
+    # 翻訳実行
+    translated = await translate(text)
+    if translated is None:
+        return  # 翻訳不要（OK、数字のみ等）
+
+    # reply_messageで返信（無料枠、プッシュメッセージ枠を消費しない）
+    from linebot.v3.messaging import (
+        Configuration, ApiClient, MessagingApi,
+        ReplyMessageRequest, TextMessage,
+    )
+    config = Configuration(access_token=Config.TRANSLATE_LINE_CHANNEL_ACCESS_TOKEN)
+    with ApiClient(config) as api_client:
+        api = MessagingApi(api_client)
+        api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=translated)],
+            )
+        )
+    print(f"[Translate] {text[:20]} → {translated[:20]}")
 
 
 # === X自動巡回 ===
