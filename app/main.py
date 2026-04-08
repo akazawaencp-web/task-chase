@@ -88,6 +88,60 @@ async def webhook(request: Request):
     return {"status": "ok"}
 
 
+@app.post("/sentry-webhook")
+async def sentry_webhook(request: Request):
+    """Sentry Webhookエンドポイント → LINE通知"""
+    try:
+        body = await request.json()
+        # Sentryのイベント情報を抽出
+        action = body.get("action", "")
+        data = body.get("data", {})
+        issue = data.get("issue", {})
+
+        title = issue.get("title", "不明なエラー")
+        culprit = issue.get("culprit", "")
+        url = issue.get("permalink", "")
+        level = issue.get("level", "error")
+        count = issue.get("count", "?")
+        project = body.get("project_slug", body.get("project", ""))
+
+        # LINE通知メッセージ組み立て
+        message = f"🚨 Sentryエラー検知\n"
+        message += f"プロジェクト: {project}\n"
+        message += f"レベル: {level}\n"
+        message += f"エラー: {title}\n"
+        if culprit:
+            message += f"場所: {culprit}\n"
+        message += f"発生回数: {count}\n"
+        if url:
+            message += f"詳細: {url}"
+
+        # LINE通知送信
+        user_id = load_user_id()
+        if user_id:
+            access_token = Config.LINE_CHANNEL_ACCESS_TOKEN
+            import requests as req
+            req.post(
+                "https://api.line.me/v2/bot/message/push",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {access_token}"
+                },
+                json={
+                    "to": user_id,
+                    "messages": [{"type": "text", "text": message}]
+                }
+            )
+            print(f"[Sentry Webhook] LINE通知送信: {title[:50]}")
+        else:
+            print(f"[Sentry Webhook] user_id未設定、通知スキップ: {title[:50]}")
+
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"[Sentry Webhook] エラー: {e}")
+        return {"status": "error", "detail": str(e)}
+
+
 async def handle_message(event: MessageEvent, text: str):
     """メッセージの内容に応じて処理を振り分ける"""
     text = text.strip()
