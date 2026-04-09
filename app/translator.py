@@ -31,7 +31,7 @@ async def translate(text: str) -> str | None:
     """テキストを翻訳する。翻訳不要ならNoneを返す。"""
     response = await client.messages.create(
         model=TRANSLATE_MODEL,
-        max_tokens=1000,
+        max_tokens=2000,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": f"<translate>{text}</translate>"}],
     )
