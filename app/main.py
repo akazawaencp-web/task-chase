@@ -46,6 +46,7 @@ REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 # 任意ファイル削除のような攻撃面は作らない（一度デプロイで消えたら本ブロックは撤去してよい）。
 _STALE_REPORTS = (
     "shokai-interview-prep-tsuchiya-candidate.html",
+    "interview-prep-tsuchiya-candidate.html",
 )
 for _stale in _STALE_REPORTS:
     try:
