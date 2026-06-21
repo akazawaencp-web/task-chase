@@ -670,6 +670,21 @@ async def upload_report_html(request: Request, _=Depends(verify_api_key)):
     return {"url": url, "filename": filename}
 
 
+@app.post("/api/reports/delete")
+async def delete_report_html(request: Request, _=Depends(verify_api_key)):
+    """汎用HTML削除（/reports/ 配下のみ・パストラバーサル対策あり）"""
+    data = await request.json()
+    filename = data.get("filename", "")
+    if not filename or "/" in filename or "\\" in filename or ".." in filename:
+        return {"error": "invalid filename"}, 400
+    filepath = REPORTS_DIR / filename
+    try:
+        filepath.unlink()
+        return {"deleted": filename}
+    except FileNotFoundError:
+        return {"deleted": filename, "note": "already absent"}
+
+
 @app.get("/robots.txt", response_class=PlainTextResponse)
 async def robots_txt():
     return "User-agent: *\nDisallow: /reports/\n"
