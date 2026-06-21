@@ -40,6 +40,19 @@ app.add_middleware(
 # HTML配信用: /reports/ でHTMLファイルにアクセス可能にする
 REPORTS_DIR = Path(os.getenv("DATA_DIR", "/tmp/task-chase-data") + "/reports")
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+
+# 守秘対応: 旧・実名入りファイルを起動時に物理削除する。
+# 外部入力なし・ファイル名はハードコード・REPORTS_DIR配下限定なので、
+# 任意ファイル削除のような攻撃面は作らない（一度デプロイで消えたら本ブロックは撤去してよい）。
+_STALE_REPORTS = (
+    "shokai-interview-prep-tsuchiya-candidate.html",
+)
+for _stale in _STALE_REPORTS:
+    try:
+        (REPORTS_DIR / _stale).unlink()
+    except FileNotFoundError:
+        pass
+
 app.mount("/reports", StaticFiles(directory=str(REPORTS_DIR)), name="reports")
 parser = WebhookParser(Config.LINE_CHANNEL_SECRET)
 
